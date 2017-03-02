@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 from logger.main import __version__
 
 setup(name='logger',
@@ -6,4 +6,4 @@ setup(name='logger',
       author='Leonard Berrada',
       packages=['logger'],
       version=str(__version__),
-      install_requires=["cPickle, GitPython"])
+      install_requires=["GitPython"])

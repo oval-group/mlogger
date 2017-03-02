@@ -2,7 +2,9 @@
 
 ## Installation
 
-To install the package, run `python setup.py install`.
+To install the package, run:
+* `pip install -r requirements.txt` (the only requirement is GitPython)
+* `python setup.py install`.
 
 ## API:
 
