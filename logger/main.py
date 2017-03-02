@@ -86,12 +86,12 @@ class Experiment(object):
         for (key, value) in data_dict.iteritems():
             self.results[key] = value
 
-    def append_data(self, data_dict, time=True):
+    def append_data(self, data_dict, timestamp=True):
 
         for (key, value) in data_dict.iteritems():
             self.results[key].append(value)
 
-        if time:
+        if timestamp:
             relative_time = time.time() - self.clocked
             self.results['time'].append(relative_time)
 
