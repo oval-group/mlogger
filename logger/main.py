@@ -1,14 +1,18 @@
 import git
 import time
 import cPickle as pickle
+import json
+
+from collections import defautdict
 
 __version__ = 0.1
 
 
-class TimeMetric(object):
+class TimeMetric_(object):
 
-    def __init__(self, name):
+    def __init__(self, name, tag):
 
+        self.tag = tag
         self.name = name
         self.reset()
 
@@ -26,13 +30,14 @@ class TimeMetric(object):
         return self.end_time - self.start_time
 
 
-class Accumulator(object):
+class Accumulator_(object):
     """
     Accumulator.
     Credits to the authors of the ImageNet example of pytorch for this.
     """
-    def __init__(self, name):
+    def __init__(self, name, tag):
 
+        self.tag = tag
         self.name = name
         self.reset()
 
@@ -51,26 +56,45 @@ class Accumulator(object):
         raise NotImplementedError("Accumulator should be subclassed")
 
 
-class AvgMetric(Accumulator):
+class AvgMetric_(Accumulator_):
 
-    def __init__(self, name):
+    def __init__(self, name, tag):
 
-        super(AvgMetric, self).__init__(name)
+        super(AvgMetric, self).__init__(tag, name)
 
     def get(self):
 
         return self.acc * 1. / self.count
 
 
-class SumMetric(Accumulator):
+class SumMetric_(Accumulator_):
 
-    def __init__(self, name):
+    def __init__(self, name, tag):
 
-        super(SumMetric, self).__init__(name)
+        super(SumMetric, self).__init__(tag, name)
 
     def get(self):
 
         return self.acc
+
+class ParentMetric_(object):
+
+	def _init__(self, *metrics):
+
+		self.children = dict()
+		for metric in self.metrics:
+			key = "{}_{}".format(metric.name, metric.tag)
+			self.children[key] = metric
+
+	def update(self, n=1, **kwargs):
+
+		for (key, value) in kwargs.iteritems():
+			self.children[key].update(value, n)
+
+	def reset(self):
+
+		for child in self.children:
+			child.reset()
 
 
 class Experiment(object):
@@ -83,10 +107,45 @@ class Experiment(object):
         self.date_and_time = time.strftime('%d-%m-%Y--%H-%M-%S')
 
         self.config = dict()
-        self.results = dict()
+        self.logged = defaultdict(list)
+        self.metrics = defaultdict(dict)
 
         if get_git_hash:
             self.add_git_hash()
+
+    def AvgMetric(self, name, tag):
+
+    	assert name not self.metrics[tag].keys(), \
+    		"metric with tag {} and name {} already exists".format(tag, name)
+
+    	metric = AvgMetric_(name, tag)
+    	self.metrics[tag][name] = metric
+
+    	return metric
+
+    def TimeMetric(self, name, tag):
+
+    	assert name not self.metrics[tag].keys(), \
+    		"metric with tag {} and name {} already exists".format(tag, name)
+
+    	metric = TimeMetric_(name, tag)
+    	self.metrics[tag][name] = metric
+
+    	return metric
+
+    def SumMetric(self, name, tag):
+
+    	assert name not self.metrics[tag].keys(), \
+    		"metric with tag {} and name {} already exists".format(tag, name)
+
+    	metric = SumMetric_(name, tag)
+    	self.metrics[tag][name] = metric
+
+    	return metric
+
+    def ParentMetric(self, *metrics):
+
+    	return ParentMetric_(metrics)
 
     def add_git_hash(self):
 
@@ -97,61 +156,40 @@ class Experiment(object):
             print("I tried to find a git repository in current "
                   "and parent directories but did not find any.")
 
-    def add_config(self, config_dict):
+    def log_config(self, config_dict):
 
-        for (key, value) in config_dict.iteritems():
-            self.config[key] = value
+        self.config.update(config_dict)
 
-    def add_data_fields(self, fields):
+    def log_with_tag(self, tag):
 
-        for field in fields:
-            assert field not in self.results.keys(), \
-                "'field' {} already exists".format(field)
-            self.results[field] = []
+    	names = self.metrics[tag].keys()
 
-    def set_data(self, data_dict):
+    	for name in names:
+    		key = "{}_{}".format(name, tag)
+    		self.logged[key].append(self.metrics[tag][name].get())
 
-        for (key, value) in data_dict.iteritems():
-            self.results[key] = value
+    def log_metric(self, metric):
 
-    def append_data(self, data_dict):
+    	if isinstance(metric, ParentMetric_):
+    		for child in metric.children:
+    			self.update_metric(metric)
+			return
 
-        for (key, value) in data_dict.iteritems():
-            self.results[key].append(value)
+		tag = metric.tag
+		name = metric.name
+		key = "{}_{}".format(name, tag)
+		self.logged[key].append(self.metrics[tag][name].get())
 
-    def set_metrics(self, *args):
-
-        data_dict = dict()
-        for metric in args:
-            data_dict[metric.name] = metric.get()
-
-        self.set_data(data_dict)
-
-    def append_metrics(self, *args):
-
-        data_dict = dict()
-        for metric in args:
-            data_dict[metric.name] = metric.get()
-
-        self.append_data(data_dict)
-
-    def to_file(self, filename):
+    def to_pickle(self, filename):
 
         var_dict = vars(self)
-        pickle.dump(var_dict, open(filename, 'wb'))
+        var_dict.pop('metrics')
+        with open(filename, 'wb') as f:
+        	pickle.dump(var_dict, f)
 
+    def to_json(self, filename):
 
-class NNExperiment(Experiment):
-
-    def __init__(self, name):
-
-        super(NNExperiment, self).__init__(name)
-
-        self.add_data_fields(('train_objective',
-                              'train_accuracy@1',
-                              'train_accuracy@k',
-                              'train_timer',
-                              'test_objective',
-                              'test_accuracy@1',
-                              'test_accuracy@k',
-                              'test_timer'))
+        var_dict = vars(self)
+        var_dict.pop('metrics')
+        with open(filename, 'wb') as f:
+        	json.dump(var_dict, f)
