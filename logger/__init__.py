@@ -1,1 +1,1 @@
-from .main import AvgMetric, SumMetric, Experiment, NNExperiment
+from .main import AvgMetric, SumMetric, TimeMetric, Experiment, NNExperiment

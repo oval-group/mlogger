@@ -5,9 +5,31 @@ import cPickle as pickle
 __version__ = 0.1
 
 
+class TimeMetric(object):
+
+    def __init__(self, name):
+
+        self.name = name
+        self.reset()
+
+    def reset(self):
+
+        self.start_time = time.time()
+        self.end_time = self.start_time
+
+    def update(self):
+
+        self.end_time = time.time()
+
+    def get(self):
+
+        return self.end_time - self.start_time
+
+
 class Accumulator(object):
     """
-    Accumulator
+    Accumulator.
+    Credits to the authors of the ImageNet example of pytorch for this.
     """
     def __init__(self, name):
 
@@ -58,12 +80,10 @@ class Experiment(object):
         super(Experiment, self).__init__()
 
         self.name = name
-        self.clocked = time.time()
         self.date_and_time = time.strftime('%d-%m-%Y--%H-%M-%S')
 
         self.config = dict()
         self.results = dict()
-        self.timers = dict()
 
         if get_git_hash:
             self.add_git_hash()
@@ -82,13 +102,6 @@ class Experiment(object):
         for (key, value) in config_dict.iteritems():
             self.config[key] = value
 
-    def add_timer_fields(self, timers):
-
-        for timer in timers:
-            assert timer not in self.results.keys(), \
-                "'timer' {} already exists".format(timer)
-            self.timers[timer] = []
-
     def add_data_fields(self, fields):
 
         for field in fields:
@@ -105,13 +118,6 @@ class Experiment(object):
 
         for (key, value) in data_dict.iteritems():
             self.results[key].append(value)
-
-    def update_timers(self, *timers):
-
-        relative_time = time.time() - self.clocked
-
-        for timer in timers:
-            self.timers[timer].append(relative_time)
 
     def set_metrics(self, *args):
 
@@ -144,9 +150,8 @@ class NNExperiment(Experiment):
         self.add_data_fields(('train_objective',
                               'train_accuracy@1',
                               'train_accuracy@k',
+                              'train_timer',
                               'test_objective',
                               'test_accuracy@1',
-                              'test_accuracy@k'))
-
-        self.add_timer_fields(('train',
-                               'test'))
+                              'test_accuracy@k',
+                              'test_timer'))
