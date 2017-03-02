@@ -107,8 +107,9 @@ class Experiment(object):
 
     def update_timers(self, *timers):
 
+        relative_time = time.time() - self.clocked
+
         for timer in timers:
-            relative_time = time.time() - self.clocked
             self.timers[timer].append(relative_time)
 
     def set_metrics(self, *args):
