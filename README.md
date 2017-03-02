@@ -22,12 +22,13 @@ class NNExperiment(Experiment):
 
         super(NNExperiment, self).__init__(name)
 
-        self.add_data({'train_batch_time': [],
-                       'train_objective': [],
-                       'train_accuracy@1': [],
-                       'train_accuracy@k': [],
-                       'test_batch_time': [],
-                       'test_objective': [],
-                       'test_accuracy@1': [],
-                       'test_accuracy@k': []})
+        self.add_data_fields(('train_objective',
+                              'train_accuracy@1',
+                              'train_accuracy@k',
+                              'test_objective',
+                              'test_accuracy@1',
+                              'test_accuracy@k'))
+
+        self.add_timers(('train',
+                         'test'))
 ```

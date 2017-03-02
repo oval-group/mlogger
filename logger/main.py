@@ -60,8 +60,8 @@ class Experiment(object):
         self.name = name
         self.config = dict()
         self.results = dict()
+        self.timers = dict()
 
-        self.results['time'] = []
         self.clocked = time.time()
 
         if get_git_hash:
@@ -81,19 +81,35 @@ class Experiment(object):
         for (key, value) in config_dict.iteritems():
             self.config[key] = value
 
+    def add_timer_fields(self, timers):
+
+        for timer in timers:
+            assert timer not in self.results.keys(), \
+                "'timer' {} already exists".format(timer)
+            self.timers[timer] = []
+
+    def add_data_fields(self, fields):
+
+        for field in fields:
+            assert field not in self.results.keys(), \
+                "'field' {} already exists".format(field)
+            self.results[field] = []
+
     def set_data(self, data_dict):
 
         for (key, value) in data_dict.iteritems():
             self.results[key] = value
 
-    def append_data(self, data_dict, timestamp=True):
+    def append_data(self, data_dict):
 
         for (key, value) in data_dict.iteritems():
             self.results[key].append(value)
 
-        if timestamp:
+    def update_timers(self, *timers):
+
+        for timer in timers:
             relative_time = time.time() - self.clocked
-            self.results['time'].append(relative_time)
+            self.timers[timer].append(relative_time)
 
     def set_metrics(self, *args):
 
@@ -103,13 +119,13 @@ class Experiment(object):
 
         self.set_data(data_dict)
 
-    def append_metrics(self, time=True, *args):
+    def append_metrics(self, *args):
 
         data_dict = dict()
         for metric in args:
             data_dict[metric.name] = metric.get()
 
-        self.append_data(data_dict, time)
+        self.append_data(data_dict)
 
     def to_file(self, filename):
 
@@ -124,11 +140,12 @@ class NNExperiment(Experiment):
 
         super(NNExperiment, self).__init__(name)
 
-        self.add_data({'train_batch_time': [],
-                       'train_objective': [],
-                       'train_accuracy@1': [],
-                       'train_accuracy@k': [],
-                       'test_batch_time': [],
-                       'test_objective': [],
-                       'test_accuracy@1': [],
-                       'test_accuracy@k': []})
+        self.add_data_fields(('train_objective',
+                              'train_accuracy@1',
+                              'train_accuracy@k',
+                              'test_objective',
+                              'test_accuracy@1',
+                              'test_accuracy@k'))
+
+        self.add_timers(('train',
+                         'test'))
