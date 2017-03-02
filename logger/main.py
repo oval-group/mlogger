@@ -132,7 +132,6 @@ class Experiment(object):
 
         var_dict = vars(self)
         pickle.dump(var_dict, open(filename, 'wb'))
-        print("Experiment logged in {}".format(filename))
 
 
 class NNExperiment(Experiment):
@@ -148,5 +147,5 @@ class NNExperiment(Experiment):
                               'test_accuracy@1',
                               'test_accuracy@k'))
 
-        self.add_timers(('train',
-                         'test'))
+        self.add_timer_fields(('train',
+                               'test'))

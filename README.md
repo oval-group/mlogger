@@ -31,6 +31,6 @@ class NNExperiment(Experiment):
                               'test_accuracy@1',
                               'test_accuracy@k'))
 
-        self.add_timers(('train',
-                         'test'))
+        self.add_timer_fields(('train',
+                               'test'))
 ```
