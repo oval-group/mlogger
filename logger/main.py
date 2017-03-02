@@ -58,11 +58,12 @@ class Experiment(object):
         super(Experiment, self).__init__()
 
         self.name = name
+        self.clocked = time.time()
+        self.date_and_time = time.strftime('%d-%m-%Y--%H-%M-%S')
+
         self.config = dict()
         self.results = dict()
         self.timers = dict()
-
-        self.clocked = time.time()
 
         if get_git_hash:
             self.add_git_hash()
