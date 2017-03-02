@@ -99,7 +99,7 @@ class ParentMetric_(object):
 
 class Experiment(object):
 
-    def __init__(self, name, get_git_hash=True):
+    def __init__(self, name, log_git_hash=True):
 
         super(Experiment, self).__init__()
 
@@ -110,8 +110,8 @@ class Experiment(object):
         self.logged = defaultdict(list)
         self.metrics = defaultdict(dict)
 
-        if get_git_hash:
-            self.add_git_hash()
+        if log_git_hash:
+            self.log_git_hash()
 
     def AvgMetric(self, name, tag):
 
@@ -147,11 +147,11 @@ class Experiment(object):
 
     	return ParentMetric_(metrics)
 
-    def add_git_hash(self):
+    def log_git_hash(self):
 
         try:
             repo = git.Repo(search_parent_directories=True)
-            self.add_config({'git_hash': repo.head.object.hexsha})
+            self.log_config({'git_hash': repo.head.object.hexsha})
         except:
             print("I tried to find a git repository in current "
                   "and parent directories but did not find any.")
