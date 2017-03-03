@@ -22,7 +22,7 @@ class TimeMetric_(object):
         self.start_time = time.time()
         self.end_time = self.start_time
 
-    def update(self, value=None):
+    def update(self, value=None, n=None):
 
         if value is None:
             value = time.time()
