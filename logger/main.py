@@ -1,9 +1,10 @@
+import copy
 import git
 import time
 import cPickle as pickle
 import json
 
-from collections import defautdict
+from collections import defaultdict
 
 __version__ = 0.1
 
@@ -21,9 +22,12 @@ class TimeMetric_(object):
         self.start_time = time.time()
         self.end_time = self.start_time
 
-    def update(self):
+    def update(self, value=None):
 
-        self.end_time = time.time()
+        if value is None:
+            value = time.time()
+
+        self.end_time = value
 
     def get(self):
 
@@ -60,7 +64,7 @@ class AvgMetric_(Accumulator_):
 
     def __init__(self, name, tag):
 
-        super(AvgMetric, self).__init__(tag, name)
+        super(AvgMetric_, self).__init__(name, tag)
 
     def get(self):
 
@@ -71,7 +75,7 @@ class SumMetric_(Accumulator_):
 
     def __init__(self, name, tag):
 
-        super(SumMetric, self).__init__(tag, name)
+        super(SumMetric_, self).__init__(name, tag)
 
     def get(self):
 
@@ -79,22 +83,31 @@ class SumMetric_(Accumulator_):
 
 class ParentMetric_(object):
 
-	def _init__(self, *metrics):
+    def __init__(self, children):
 
-		self.children = dict()
-		for metric in self.metrics:
-			key = "{}_{}".format(metric.name, metric.tag)
-			self.children[key] = metric
+        super(ParentMetric_, self).__init__()
 
-	def update(self, n=1, **kwargs):
+    	self.children = dict()
+    	for child in children:
+    		self.children[child.name] = child
 
-		for (key, value) in kwargs.iteritems():
-			self.children[key].update(value, n)
+    def update(self, n=1, **kwargs):
 
-	def reset(self):
+    	for (key, value) in kwargs.iteritems():
+            self.children[key].update(value, n)
 
-		for child in self.children:
-			child.reset()
+    def reset(self):
+
+        for child in self.children.itervalues():
+    		child.reset()
+
+    def get(self):
+
+        res = dict()
+        for (name, child) in self.children.iteritems():
+            res[name] = child.get()
+
+        return res
 
 
 class Experiment(object):
@@ -113,9 +126,9 @@ class Experiment(object):
         if log_git_hash:
             self.log_git_hash()
 
-    def AvgMetric(self, name, tag):
+    def AvgMetric(self, name, tag="default"):
 
-    	assert name not self.metrics[tag].keys(), \
+    	assert name not in self.metrics[tag].keys(), \
     		"metric with tag {} and name {} already exists".format(tag, name)
 
     	metric = AvgMetric_(name, tag)
@@ -123,9 +136,9 @@ class Experiment(object):
 
     	return metric
 
-    def TimeMetric(self, name, tag):
+    def TimeMetric(self, name, tag="default"):
 
-    	assert name not self.metrics[tag].keys(), \
+    	assert name not in self.metrics[tag].keys(), \
     		"metric with tag {} and name {} already exists".format(tag, name)
 
     	metric = TimeMetric_(name, tag)
@@ -133,9 +146,9 @@ class Experiment(object):
 
     	return metric
 
-    def SumMetric(self, name, tag):
+    def SumMetric(self, name, tag="default"):
 
-    	assert name not self.metrics[tag].keys(), \
+    	assert name not in self.metrics[tag].keys(), \
     		"metric with tag {} and name {} already exists".format(tag, name)
 
     	metric = SumMetric_(name, tag)
@@ -143,9 +156,27 @@ class Experiment(object):
 
     	return metric
 
-    def ParentMetric(self, *metrics):
+    def ParentMetric(self, name, tag="default", children=()):
 
-    	return ParentMetric_(metrics)
+        for child in children:
+
+            # continue if child tag is same as parent's
+            if child.tag == tag:
+                continue
+
+            # else remove child from previous tagging
+            self.metrics[child.tag].pop(child.name)
+
+            # update child's tag
+            child.tag = tag
+
+            # update tagging
+            self.metrics[child.tag][child.name] = child
+
+    	metric = ParentMetric_(children)
+        self.metrics[tag][name] = metric
+
+        return metric
 
     def log_git_hash(self):
 
@@ -162,7 +193,9 @@ class Experiment(object):
 
     def log_with_tag(self, tag):
 
-    	names = self.metrics[tag].keys()
+        # gather all metrics with given tag except Parents
+    	names = (k for k in self.metrics[tag].keys() \
+            if not isinstance(self.metrics[tag][k], ParentMetric_))
 
     	for name in names:
     		key = "{}_{}".format(name, tag)
@@ -180,16 +213,22 @@ class Experiment(object):
 		key = "{}_{}".format(name, tag)
 		self.logged[key].append(self.metrics[tag][name].get())
 
+    def get_metric(self, name, tag="default"):
+
+        assert tag in self.metrics.keys() and name in self.metrics[tag].keys()
+
+        return self.metrics[tag][name]
+
     def to_pickle(self, filename):
 
-        var_dict = vars(self)
+        var_dict = copy.copy(vars(self))
         var_dict.pop('metrics')
         with open(filename, 'wb') as f:
         	pickle.dump(var_dict, f)
 
     def to_json(self, filename):
 
-        var_dict = vars(self)
+        var_dict = copy.copy(vars(self))
         var_dict.pop('metrics')
         with open(filename, 'wb') as f:
         	json.dump(var_dict, f)

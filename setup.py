@@ -2,7 +2,7 @@ from setuptools import setup
 from logger.main import __version__
 
 setup(name='logger',
-      description='A minimalist logger for experiments',
+      description='A simple logger for experiments',
       author='Leonard Berrada',
       packages=['logger'],
       version=str(__version__),
