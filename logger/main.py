@@ -49,11 +49,16 @@ class Accumulator_(object):
 
         self.acc = 0
         self.count = 0
+        self.const = 0
 
     def update(self, val, n=1):
 
         self.acc += val * n
         self.count += n
+
+    def set_constant(self, val):
+
+        self.const = val
 
     def get(self):
 
@@ -68,7 +73,7 @@ class AvgMetric_(Accumulator_):
 
     def get(self):
 
-        return self.acc * 1. / self.count
+        return self.const + self.acc * 1. / self.count
 
 
 class SumMetric_(Accumulator_):
@@ -79,7 +84,7 @@ class SumMetric_(Accumulator_):
 
     def get(self):
 
-        return self.acc
+        return self.const + self.acc
 
 class ParentMetric_(object):
 
