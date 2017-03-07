@@ -98,8 +98,13 @@ class ParentMetric_(object):
 
     def update(self, n=1, **kwargs):
 
-    	for (key, value) in kwargs.iteritems():
+        for (key, value) in kwargs.iteritems():
             self.children[key].update(value, n)
+
+    def set_constant(self, **kwargs):
+
+        for (key, value) in kwargs.iteritems():
+            self.children[key].set_constant(value)
 
     def reset(self):
 
