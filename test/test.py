@@ -3,8 +3,8 @@ import git
 import time
 import numpy as np
 
-from logger.main import TimeMetric_, AvgMetric_, SumMetric_, ParentMetric_,\
-	Experiment
+from logger.xp import Experiment
+from logger.metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentMetric_
 
 
 class TestTimeMetric(unittest.TestCase):
@@ -55,12 +55,12 @@ class TestAvgMetric(unittest.TestCase):
 		n_updates = 10
 		values = np.random.random(size=n_updates)
 		weights = np.random.randint(100, size=n_updates)
-		
+
 		for k in range(n_updates):
 			value, weight = values[k], weights[k]
 			self.metric.update(value, n=weight)
-		
-		assert np.isclose(self.metric.get(), 
+
+		assert np.isclose(self.metric.get(),
 		                  np.sum(values * weights) / np.sum(weights))
 
 
@@ -85,11 +85,11 @@ class TestSumMetric(unittest.TestCase):
 		n_updates = 10
 		values = np.random.random(size=n_updates)
 		weights = np.random.randint(100, size=n_updates)
-		
+
 		for k in range(n_updates):
 			value, weight = values[k], weights[k]
 			self.metric.update(value, n=weight)
-		
+
 		assert np.isclose(self.metric.get(), np.sum(values * weights))
 
 class TestParentMetric(unittest.TestCase):
