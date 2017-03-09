@@ -1,5 +1,6 @@
 from setuptools import setup
-from logger.main import __version__
+
+__version__ = 0.1
 
 setup(name='logger',
       description='A simple logger for experiments',
