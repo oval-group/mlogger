@@ -4,6 +4,11 @@ import time
 import cPickle as pickle
 import json
 
+try:
+    import pycrayon
+except:
+    pycrayon = None
+
 from collections import defaultdict
 
 from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentMetric_
@@ -20,6 +25,7 @@ class Experiment(object):
         self.date_and_time = time.strftime('%d-%m-%Y--%H-%M-%S')
 
         self.config = dict()
+        self.crayons = dict()
         self.logged = defaultdict(list)
         self.metrics = defaultdict(dict)
 
@@ -94,12 +100,12 @@ class Experiment(object):
     def log_with_tag(self, tag):
 
         # gather all metrics with given tag except Parents
-    	names = (k for k in self.metrics[tag].keys() \
-            if not isinstance(self.metrics[tag][k], ParentMetric_))
+        # (to avoid logging twice the information)
+    	metrics = (m for m in self.metrics[tag].itervalues() \
+            if not isinstance(m, ParentMetric_))
 
-    	for name in names:
-    		key = "{}_{}".format(name, tag)
-    		self.logged[key].append(self.metrics[tag][name].get())
+    	for metric in metrics:
+    		self.log_metric(metric)
 
     def log_metric(self, metric):
 
@@ -108,16 +114,22 @@ class Experiment(object):
     			self.update_metric(metric)
 			return
 
-		tag = metric.tag
-		name = metric.name
-		key = "{}_{}".format(name, tag)
-		self.logged[key].append(self.metrics[tag][name].get())
+		key = "{}_{}".format(metric.name, metric.tag)
+		self.logged[key].append(metric.get())
+
+        if metric.tag in self.crayons:
+            self.crayons[metric.tag].add_scalar_value(metric.name, metric.get())
 
     def get_metric(self, name, tag="default"):
 
         assert tag in self.metrics.keys() and name in self.metrics[tag].keys()
 
         return self.metrics[tag][name]
+
+    def Crayon(self, crayon_xp, tag):
+
+        assert pycrayon is not None, 'pycrayon is not installed'
+        self.crayons[tag] = crayon_xp
 
     def to_pickle(self, filename):
 
