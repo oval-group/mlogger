@@ -135,6 +135,7 @@ class Experiment(object):
 
         var_dict = copy.copy(vars(self))
         var_dict.pop('metrics')
+        var_dict.pop('crayons')
         with open(filename, 'wb') as f:
         	pickle.dump(var_dict, f)
 
@@ -142,5 +143,6 @@ class Experiment(object):
 
         var_dict = copy.copy(vars(self))
         var_dict.pop('metrics')
+        var_dict.pop('crayons')
         with open(filename, 'wb') as f:
         	json.dump(var_dict, f)
