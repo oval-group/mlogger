@@ -105,7 +105,7 @@ class Experiment(object):
             if not isinstance(m, ParentMetric_))
 
     	for metric in metrics:
-    		self.log_metric(metric)
+            self.log_metric(metric)
 
     def log_metric(self, metric):
 
@@ -114,8 +114,8 @@ class Experiment(object):
     			self.update_metric(metric)
 			return
 
-		key = "{}_{}".format(metric.name, metric.tag)
-		self.logged[key].append(metric.get())
+        key = "{}_{}".format(metric.name, metric.tag)
+        self.logged[key].append(metric.get())
 
         if metric.tag in self.crayons:
             self.crayons[metric.tag].add_scalar_value(metric.name, metric.get())
