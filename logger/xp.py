@@ -26,6 +26,8 @@ class Experiment(object):
 
         self.config = dict()
         self.crayons = dict()
+        self.monitor = False
+
         self.logged = defaultdict(list)
         self.metrics = defaultdict(dict)
 
@@ -34,33 +36,33 @@ class Experiment(object):
 
     def AvgMetric(self, name, tag="default"):
 
-    	assert name not in self.metrics[tag].keys(), \
-    		"metric with tag {} and name {} already exists".format(tag, name)
+        assert name not in self.metrics[tag].keys(), \
+            "metric with tag {} and name {} already exists".format(tag, name)
 
-    	metric = AvgMetric_(name, tag)
-    	self.metrics[tag][name] = metric
+        metric = AvgMetric_(name, tag)
+        self.metrics[tag][name] = metric
 
-    	return metric
+        return metric
 
     def TimeMetric(self, name, tag="default"):
 
-    	assert name not in self.metrics[tag].keys(), \
-    		"metric with tag {} and name {} already exists".format(tag, name)
+        assert name not in self.metrics[tag].keys(), \
+            "metric with tag {} and name {} already exists".format(tag, name)
 
-    	metric = TimeMetric_(name, tag)
-    	self.metrics[tag][name] = metric
+        metric = TimeMetric_(name, tag)
+        self.metrics[tag][name] = metric
 
-    	return metric
+        return metric
 
     def SumMetric(self, name, tag="default"):
 
-    	assert name not in self.metrics[tag].keys(), \
-    		"metric with tag {} and name {} already exists".format(tag, name)
+        assert name not in self.metrics[tag].keys(), \
+            "metric with tag {} and name {} already exists".format(tag, name)
 
-    	metric = SumMetric_(name, tag)
-    	self.metrics[tag][name] = metric
+        metric = SumMetric_(name, tag)
+        self.metrics[tag][name] = metric
 
-    	return metric
+        return metric
 
     def ParentMetric(self, name, tag="default", children=()):
 
@@ -79,7 +81,7 @@ class Experiment(object):
             # update tagging
             self.metrics[child.tag][child.name] = child
 
-    	metric = ParentMetric_(children)
+        metric = ParentMetric_(children)
         self.metrics[tag][name] = metric
 
         return metric
@@ -101,24 +103,34 @@ class Experiment(object):
 
         # gather all metrics with given tag except Parents
         # (to avoid logging twice the information)
-    	metrics = (m for m in self.metrics[tag].itervalues() \
+        metrics = (m for m in self.metrics[tag].itervalues() \
             if not isinstance(m, ParentMetric_))
 
-    	for metric in metrics:
+        # log all metrics
+        for metric in metrics:
             self.log_metric(metric)
 
     def log_metric(self, metric):
 
-    	if isinstance(metric, ParentMetric_):
-    		for child in metric.children:
-    			self.update_metric(metric)
-			return
+        # log only child metrics
+        if isinstance(metric, ParentMetric_):
+            for child in metric.children.itervalues():
+                self.log_metric(child)
+            return
 
         key = "{}_{}".format(metric.name, metric.tag)
         self.logged[key].append(metric.get())
 
-        if metric.tag in self.crayons:
-            self.crayons[metric.tag].add_scalar_value(metric.name, metric.get())
+        if self.monitor and metric.tag in self.crayons:
+            try:
+                # try sending data to monitoring
+                self.crayons[metric.tag].add_scalar_value(metric.name, metric.get())
+            except:
+                # if an error occurs, warn user and give up monitoring
+                # (useful if connection is lost for instance)
+                print('I could not send my data to Crayon :(\n'
+                      'Giving up monitoring.')
+                self.monitoring = False
 
     def get_metric(self, name, tag="default"):
 
@@ -129,6 +141,7 @@ class Experiment(object):
     def Crayon(self, crayon_xp, tag):
 
         assert pycrayon is not None, 'pycrayon is not installed'
+        self.monitor = True
         self.crayons[tag] = crayon_xp
 
     def to_pickle(self, filename):
@@ -137,7 +150,7 @@ class Experiment(object):
         var_dict.pop('metrics')
         var_dict.pop('crayons')
         with open(filename, 'wb') as f:
-        	pickle.dump(var_dict, f)
+            pickle.dump(var_dict, f)
 
     def to_json(self, filename):
 
@@ -145,4 +158,4 @@ class Experiment(object):
         var_dict.pop('metrics')
         var_dict.pop('crayons')
         with open(filename, 'wb') as f:
-        	json.dump(var_dict, f)
+            json.dump(var_dict, f)
