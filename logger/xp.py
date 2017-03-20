@@ -130,7 +130,7 @@ class Experiment(object):
                 # (useful if connection is lost for instance)
                 print('I could not send my data to Crayon :(\n'
                       'Giving up monitoring.')
-                self.monitoring = False
+                self.monitor = False
 
     def get_metric(self, name, tag="default"):
 
