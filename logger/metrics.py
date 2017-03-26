@@ -1,5 +1,6 @@
 import time
 
+
 class TimeMetric_(object):
 
     def __init__(self, name, tag):
@@ -7,18 +8,24 @@ class TimeMetric_(object):
         self.tag = tag
         self.name = name
         self.reset()
+        self.timer = self
 
     def reset(self):
 
         self.start_time = time.time()
         self.end_time = self.start_time
 
-    def update(self, value=None, n=None):
+    def update(self, value=None, n=None, timed=None):
+        """ heavy interface so that interface is common with
+        other metrics...
+        """
 
-        if value is None:
-            value = time.time()
-
-        self.end_time = value
+        if value is not None:
+            self.end_time = value
+        elif timed is not None:
+            self.end_time = timed
+        else:
+            self.end_time = time.time()
 
     def get(self):
 
@@ -34,6 +41,7 @@ class Accumulator_(object):
 
         self.tag = tag
         self.name = name
+        self.timer = TimeMetric_(name='timer', tag='{}_{}'.format(tag, name))
         self.reset()
 
     def reset(self):
@@ -42,10 +50,11 @@ class Accumulator_(object):
         self.count = 0
         self.const = 0
 
-    def update(self, val, n=1):
+    def update(self, val, n=1, timed=None):
 
         self.acc += val * n
         self.count += n
+        self.timer.update(timed)
 
     def set_constant(self, val):
 
@@ -77,6 +86,7 @@ class SumMetric_(Accumulator_):
 
         return self.const + self.acc
 
+
 class ParentMetric_(object):
 
     def __init__(self, children):
@@ -87,10 +97,10 @@ class ParentMetric_(object):
         for child in children:
             self.children[child.name] = child
 
-    def update(self, n=1, **kwargs):
+    def update(self, n=1, timed=None, **kwargs):
 
         for (key, value) in kwargs.iteritems():
-            self.children[key].update(value, n)
+            self.children[key].update(value, n, timed)
 
     def set_constant(self, **kwargs):
 

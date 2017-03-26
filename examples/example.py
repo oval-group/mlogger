@@ -1,22 +1,35 @@
-# A simple logger for experiments
-
-Full credits to the authors of [tnt](https://github.com/pytorch/tnt) for the structure with metrics.
-
-## Installation
-
-To install the package, run:
-* `pip install -r requirements.txt` (the only requirement are `GitPython` and `numpy`, `visdom` is optional but recommended for real-time visualization)
-* `python setup.py install`.
-
-## Examples
-An toy example can be found at `examples/example.py`:
-
-```python
 import logger
 import numpy as np
 
-# code to generate fake data
-# ...
+
+def random_data_generator():
+    """ fake data generator
+    """
+    n_batches = np.random.randint(1, 10)
+    for _ in xrange(n_batches):
+        batch_size = np.random.randint(1, 5)
+        data = np.random.normal(size=(batch_size, 3))
+        target = np.random.randint(10, size=batch_size)
+        yield (data, target)
+
+
+def training_data():
+    return random_data_generator()
+
+
+def validation_data():
+    return random_data_generator()
+
+
+def oracle(data, target):
+    """ fake metric data generator
+    """
+    loss = np.random.rand()
+    acc1 = np.random.rand() + 70
+    acck = np.random.rand() + 90
+
+    return loss, acc1, acck
+
 
 n_epochs = 10
 use_visdom = True
@@ -60,7 +73,3 @@ for epoch in range(n_epochs):
 xp.to_pickle("my_pickle_log.pkl")
 # save to json file
 xp.to_json("my_json_log.json")
-```
-
-This generates the following plot on `visdom`:
-![alt text](examples/example.jpg)

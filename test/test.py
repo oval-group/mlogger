@@ -31,6 +31,7 @@ class TestTimeMetric(unittest.TestCase):
         value = time.time()
         self.metric.update(value)
         assert self.metric.get() == value - self.start_time
+        assert self.metric.timer.get() == value - self.start_time
 
         self.metric.update()
 
@@ -174,9 +175,9 @@ class TestExperiment(unittest.TestCase):
 
         xp.log_with_tag('my_tag')
 
-        assert xp.logged['child1_my_tag'] == [0.1]
-        assert xp.logged['child2_my_tag'] == [0.5]
-        assert xp.logged['timer_my_tag'] == [1. - timer.start_time]
+        assert xp.logged['child1_my_tag'].values() == [0.1]
+        assert xp.logged['child2_my_tag'].values() == [0.5]
+        assert xp.logged['timer_my_tag'].values() == [1. - timer.start_time]
 
     def test_log_metric(self):
 
@@ -191,9 +192,9 @@ class TestExperiment(unittest.TestCase):
         xp.log_metric(metrics)
         xp.log_metric(timer)
 
-        assert xp.logged['child1_my_tag'] == [0.1]
-        assert xp.logged['child2_my_tag'] == [0.5]
-        assert xp.logged['timer_my_tag'] == [1. - timer.start_time]
+        assert xp.logged['child1_my_tag'].values() == [0.1]
+        assert xp.logged['child2_my_tag'].values() == [0.5]
+        assert xp.logged['timer_my_tag'].values() == [1. - timer.start_time]
 
     def test_get_metric(self):
 
@@ -231,9 +232,10 @@ class TestExperiment(unittest.TestCase):
         assert my_dict['config'].values() == getattr(xp, 'config').values()
 
         # check log
-        assert my_dict['logged']['child1_my_tag'] == [0.1]
-        assert my_dict['logged']['child2_my_tag'] == [0.5]
-        assert my_dict['logged']['timer_my_tag'] == [1. - timer.start_time]
+        assert my_dict['logged']['child1_my_tag'].values() == [0.1]
+        assert my_dict['logged']['child2_my_tag'].values() == [0.5]
+        assert my_dict['logged']['timer_my_tag'].values() == \
+            [1. - timer.start_time]
 
         os.remove('tmp.pkl')
 
@@ -259,8 +261,9 @@ class TestExperiment(unittest.TestCase):
         assert my_dict['config'].values() == getattr(xp, 'config').values()
 
         # check log
-        assert my_dict['logged']['child1_my_tag'] == [0.1]
-        assert my_dict['logged']['child2_my_tag'] == [0.5]
-        assert my_dict['logged']['timer_my_tag'] == [1. - timer.start_time]
+        assert my_dict['logged']['child1_my_tag'].values() == [0.1]
+        assert my_dict['logged']['child2_my_tag'].values() == [0.5]
+        assert my_dict['logged']['timer_my_tag'].values() == \
+            [1. - timer.start_time]
 
         os.remove('tmp.json')

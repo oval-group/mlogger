@@ -3,33 +3,37 @@ import git
 import time
 import cPickle as pickle
 import json
+import numpy as np
 
 try:
-    import pycrayon
-except:
-    pycrayon = None
+    import visdom
+except ImportError:
+    visdom = None
 
 from collections import defaultdict
 
 from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentMetric_
 
-__version__ = 0.1
 
 class Experiment(object):
 
-    def __init__(self, name, log_git_hash=True):
+    def __init__(self, name, log_git_hash=True, use_visdom=False):
 
         super(Experiment, self).__init__()
 
         self.name = name
         self.date_and_time = time.strftime('%d-%m-%Y--%H-%M-%S')
 
-        self.config = dict()
-        self.crayons = dict()
-        self.monitor = False
-
-        self.logged = defaultdict(list)
+        self.logged = defaultdict(dict)
         self.metrics = defaultdict(dict)
+
+        self.config = dict()
+        self.use_visdom = use_visdom
+
+        if self.use_visdom:
+            assert visdom is not None, "visdom could not be imported"
+            self.viz = visdom.Visdom(env=name)
+            self.viz_dict = dict()
 
         if log_git_hash:
             self.log_git_hash()
@@ -103,8 +107,8 @@ class Experiment(object):
 
         # gather all metrics with given tag except Parents
         # (to avoid logging twice the information)
-        metrics = (m for m in self.metrics[tag].itervalues() \
-            if not isinstance(m, ParentMetric_))
+        metrics = (m for m in self.metrics[tag].itervalues()
+                   if not isinstance(m, ParentMetric_))
 
         # log all metrics
         for metric in metrics:
@@ -118,19 +122,30 @@ class Experiment(object):
                 self.log_metric(child)
             return
 
-        key = "{}_{}".format(metric.name, metric.tag)
-        self.logged[key].append(metric.get())
+        tag, name = metric.tag, metric.name
+        key = "{}_{}".format(name, tag)
+        self.logged[key][metric.timer.get()] = metric.get()
 
-        if self.monitor and metric.tag in self.crayons:
+        if self.use_visdom and not isinstance(metric, TimeMetric_):
             try:
-                # try sending data to monitoring
-                self.crayons[metric.tag].add_scalar_value(metric.name, metric.get())
+                x = np.array([metric.timer.get()])
+                y = np.array([metric.get()])
+                if name not in self.viz_dict.keys():
+                    self.viz_dict[name] = \
+                        self.viz.line(Y=y, X=x,
+                                      opts={'legend': [tag],
+                                            'title': name})
+                else:
+                    self.viz.updateTrace(Y=y, X=x,
+                                         name=tag,
+                                         win=self.viz_dict[name],
+                                         append=True)
             except:
                 # if an error occurs, warn user and give up monitoring
                 # (useful if connection is lost for instance)
-                print('I could not send my data to Crayon :(\n'
+                print('I could not send my data to Visdom :(\n'
                       'Giving up monitoring.')
-                self.monitor = False
+                self.use_visdom = False
 
     def get_metric(self, name, tag="default"):
 
@@ -138,17 +153,13 @@ class Experiment(object):
 
         return self.metrics[tag][name]
 
-    def Crayon(self, crayon_xp, tag):
-
-        assert pycrayon is not None, 'pycrayon is not installed'
-        self.monitor = True
-        self.crayons[tag] = crayon_xp
-
     def to_pickle(self, filename):
 
         var_dict = copy.copy(vars(self))
         var_dict.pop('metrics')
-        var_dict.pop('crayons')
+        for key in ('viz', 'viz_dict'):
+            if key in var_dict.keys():
+                var_dict.pop(key)
         with open(filename, 'wb') as f:
             pickle.dump(var_dict, f)
 
@@ -156,6 +167,8 @@ class Experiment(object):
 
         var_dict = copy.copy(vars(self))
         var_dict.pop('metrics')
-        var_dict.pop('crayons')
+        for key in ('viz', 'viz_dict'):
+            if key in var_dict.keys():
+                var_dict.pop(key)
         with open(filename, 'wb') as f:
             json.dump(var_dict, f)
