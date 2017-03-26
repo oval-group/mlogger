@@ -7,7 +7,7 @@ import cPickle as pickle
 import json
 
 from logger.xp import Experiment
-from logger.metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentMetric_
+from logger.metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_
 
 
 class TestTimeMetric(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestTimeMetric(unittest.TestCase):
         self.tag = "my_tag"
         self.metric = TimeMetric_(name=self.name,
                                   tag=self.tag)
-        self.start_time = self.metric.start_time
+        self.start_time = self.metric.timer.start_time
 
     def test_init(self):
 
@@ -97,7 +97,7 @@ class TestSumMetric(unittest.TestCase):
         assert np.isclose(self.metric.get(), np.sum(values * weights))
 
 
-class TestParentMetric(unittest.TestCase):
+class TestParentWrapper(unittest.TestCase):
 
     def setUp(self):
 
@@ -112,7 +112,7 @@ class TestParentMetric(unittest.TestCase):
 
         self.children = (self.child1, self.child2, self.child3)
 
-        self.metric = ParentMetric_(children=self.children)
+        self.metric = ParentWrapper_(children=self.children)
 
     def test_init(self):
 
@@ -135,7 +135,7 @@ class TestParentMetric(unittest.TestCase):
 
         res_dict = self.metric.get()
 
-        assert res_dict['time'] == value_time - self.child1.start_time
+        assert res_dict['time'] == value_time - self.child1.timer.start_time
         assert res_dict['avg'] == value_avg
         assert res_dict['sum'] == n * value_sum
 
@@ -166,9 +166,9 @@ class TestExperiment(unittest.TestCase):
     def test_log_with_tag(self):
 
         xp = Experiment("my_name")
-        metrics = xp.ParentMetric(tag='my_tag', name='parent',
-                                  children=(xp.AvgMetric(name='child1'),
-                                            xp.SumMetric(name='child2')))
+        metrics = xp.ParentWrapper(tag='my_tag', name='parent',
+                                   children=(xp.AvgMetric(name='child1'),
+                                             xp.SumMetric(name='child2')))
         timer = xp.TimeMetric(tag='my_tag', name='timer')
         metrics.update(child1=0.1, child2=0.5)
         timer.update(1.)
@@ -177,14 +177,14 @@ class TestExperiment(unittest.TestCase):
 
         assert xp.logged['child1_my_tag'].values() == [0.1]
         assert xp.logged['child2_my_tag'].values() == [0.5]
-        assert xp.logged['timer_my_tag'].values() == [1. - timer.start_time]
+        assert xp.logged['timer_my_tag'].values() == [1. - timer.timer.start_time]
 
     def test_log_metric(self):
 
         xp = Experiment("my_name")
-        metrics = xp.ParentMetric(tag='my_tag', name='parent',
-                                  children=(xp.AvgMetric(name='child1'),
-                                            xp.SumMetric(name='child2')))
+        metrics = xp.ParentWrapper(tag='my_tag', name='parent',
+                                   children=(xp.AvgMetric(name='child1'),
+                                             xp.SumMetric(name='child2')))
         timer = xp.TimeMetric(tag='my_tag', name='timer')
         metrics.update(child1=0.1, child2=0.5)
         timer.update(1.)
@@ -194,7 +194,7 @@ class TestExperiment(unittest.TestCase):
 
         assert xp.logged['child1_my_tag'].values() == [0.1]
         assert xp.logged['child2_my_tag'].values() == [0.5]
-        assert xp.logged['timer_my_tag'].values() == [1. - timer.start_time]
+        assert xp.logged['timer_my_tag'].values() == [1. - timer.timer.start_time]
 
     def test_get_metric(self):
 
@@ -213,9 +213,9 @@ class TestExperiment(unittest.TestCase):
     def test_to_pickle(self):
 
         xp = Experiment("my_name")
-        metrics = xp.ParentMetric(tag='my_tag', name='parent',
-                                  children=(xp.AvgMetric(name='child1'),
-                                            xp.SumMetric(name='child2')))
+        metrics = xp.ParentWrapper(tag='my_tag', name='parent',
+                                   children=(xp.AvgMetric(name='child1'),
+                                             xp.SumMetric(name='child2')))
         timer = xp.TimeMetric(tag='my_tag', name='timer')
         metrics.update(child1=0.1, child2=0.5)
         timer.update(1.)
@@ -235,16 +235,16 @@ class TestExperiment(unittest.TestCase):
         assert my_dict['logged']['child1_my_tag'].values() == [0.1]
         assert my_dict['logged']['child2_my_tag'].values() == [0.5]
         assert my_dict['logged']['timer_my_tag'].values() == \
-            [1. - timer.start_time]
+            [1. - timer.timer.start_time]
 
         os.remove('tmp.pkl')
 
     def test_to_json(self):
 
         xp = Experiment("my_name")
-        metrics = xp.ParentMetric(tag='my_tag', name='parent',
-                                  children=(xp.AvgMetric(name='child1'),
-                                            xp.SumMetric(name='child2')))
+        metrics = xp.ParentWrapper(tag='my_tag', name='parent',
+                                   children=(xp.AvgMetric(name='child1'),
+                                             xp.SumMetric(name='child2')))
         timer = xp.TimeMetric(tag='my_tag', name='timer')
         metrics.update(child1=0.1, child2=0.5)
         timer.update(1.)
@@ -264,6 +264,6 @@ class TestExperiment(unittest.TestCase):
         assert my_dict['logged']['child1_my_tag'].values() == [0.1]
         assert my_dict['logged']['child2_my_tag'].values() == [0.5]
         assert my_dict['logged']['timer_my_tag'].values() == \
-            [1. - timer.start_time]
+            [1. - timer.timer.start_time]
 
         os.remove('tmp.json')

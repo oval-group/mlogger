@@ -44,15 +44,15 @@ xp = logger.Experiment("xp_name", use_visdom=use_visdom,
 # log the hyperparameters of the experiment
 xp.log_config(hyperparameters)
 # create parent metric for training metrics (easier interface)
-train_metrics = xp.ParentMetric(tag='train', name='parent',
-                                children=(xp.AvgMetric(name='loss'),
-                                          xp.AvgMetric(name='acc1'),
-                                          xp.AvgMetric(name='acck')))
+train_metrics = xp.ParentWrapper(tag='train', name='parent',
+                                 children=(xp.AvgMetric(name='loss'),
+                                           xp.AvgMetric(name='acc1'),
+                                           xp.AvgMetric(name='acck')))
 # same for validation metrics (note all children inherit tag from parent)
-val_metrics = xp.ParentMetric(tag='val', name='parent',
-                              children=(xp.AvgMetric(name='loss'),
-                                        xp.AvgMetric(name='acc1'),
-                                        xp.AvgMetric(name='acck')))
+val_metrics = xp.ParentWrapper(tag='val', name='parent',
+                               children=(xp.AvgMetric(name='loss'),
+                                         xp.AvgMetric(name='acc1'),
+                                         xp.AvgMetric(name='acck')))
 
 for epoch in range(n_epochs):
     # reset training metrics
@@ -69,7 +69,7 @@ for epoch in range(n_epochs):
         loss, acc1, acck = oracle(x, y)
         val_metrics.update(loss=loss, acc1=acc1,
                            acck=acck, n=len(x))
-    # Method 2 for logging: log Parent metric
+    # Method 2 for logging: log Parent wrapper
     # (automatically logs all children)
     xp.log_metric(val_metrics)
 

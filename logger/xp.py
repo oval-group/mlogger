@@ -12,7 +12,7 @@ except ImportError:
 
 from collections import defaultdict
 
-from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentMetric_
+from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_
 
 
 class Experiment(object):
@@ -57,6 +57,16 @@ class Experiment(object):
 
         return metric
 
+    def BasicMetric(self, name, tag="default"):
+
+        assert name not in self.metrics[tag].keys(), \
+            "metric with tag {} and name {} already exists".format(tag, name)
+
+        metric = BasicMetric_(name, tag)
+        self.metrics[tag][name] = metric
+
+        return metric
+
     def TimeMetric(self, name, tag="default"):
 
         assert name not in self.metrics[tag].keys(), \
@@ -77,7 +87,7 @@ class Experiment(object):
 
         return metric
 
-    def ParentMetric(self, name, tag="default", children=()):
+    def ParentWrapper(self, name, tag="default", children=()):
 
         for child in children:
 
@@ -94,7 +104,7 @@ class Experiment(object):
             # update tagging
             self.metrics[child.tag][child.name] = child
 
-        metric = ParentMetric_(children)
+        metric = ParentWrapper_(children)
         self.metrics[tag][name] = metric
 
         return metric
@@ -117,7 +127,7 @@ class Experiment(object):
         # gather all metrics with given tag except Parents
         # (to avoid logging twice the information)
         metrics = (m for m in self.metrics[tag].itervalues()
-                   if not isinstance(m, ParentMetric_))
+                   if not isinstance(m, ParentWrapper_))
 
         # log all metrics
         for metric in metrics:
@@ -126,7 +136,7 @@ class Experiment(object):
     def log_metric(self, metric):
 
         # log only child metrics
-        if isinstance(metric, ParentMetric_):
+        if isinstance(metric, ParentWrapper_):
             for child in metric.children.itervalues():
                 self.log_metric(child)
             return
