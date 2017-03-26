@@ -56,9 +56,10 @@ class Accumulator_(object):
         self.count += n
         self.timer.update(timed)
 
-    def set_constant(self, val):
+    def set_constant(self, val, timed=None):
 
         self.const = val
+        self.timer.update(timed)
 
     def get(self):
 
