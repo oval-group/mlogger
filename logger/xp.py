@@ -17,7 +17,13 @@ from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentMetric_
 
 class Experiment(object):
 
-    def __init__(self, name, log_git_hash=True, use_visdom=False):
+    def __init__(self, name, log_git_hash=True,
+                 use_visdom=False, visdom_opts={}):
+        """ Create an experiment with the following parameters:
+        - log_git_hash (bool): retrieve current commit hash to log code status
+        - use_visdom (bool): monitor metrics logged on visdom
+        - visdom_opts (dict): options for visdom
+        """
 
         super(Experiment, self).__init__()
 
@@ -32,7 +38,10 @@ class Experiment(object):
 
         if self.use_visdom:
             assert visdom is not None, "visdom could not be imported"
-            self.viz = visdom.Visdom(env=name)
+            # visdom env is given by Experiment name unless specified
+            if 'env' not in visdom_opts.keys():
+                visdom_opts['env'] = name
+            self.viz = visdom.Visdom(**visdom_opts)
             self.viz_dict = dict()
 
         if log_git_hash:
@@ -134,7 +143,8 @@ class Experiment(object):
                     self.viz_dict[name] = \
                         self.viz.line(Y=y, X=x,
                                       opts={'legend': [tag],
-                                            'title': name})
+                                            'title': name,
+                                            'xlabel': 'Time (s)'})
                 else:
                     self.viz.updateTrace(Y=y, X=x,
                                          name=tag,

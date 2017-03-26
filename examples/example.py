@@ -35,8 +35,10 @@ n_epochs = 10
 use_visdom = True
 hyperparameters = dict(regularization=1,
                        n_epochs=n_epochs)
-
-xp = logger.Experiment("xp_name", use_visdom=use_visdom)
+visdom_opts = dict(server='http://localhost',
+                   port=8097)
+xp = logger.Experiment("xp_name", use_visdom=use_visdom,
+                       visdom_opts=visdom_opts)
 # log the hyperparameters of the experiment
 xp.log_config(hyperparameters)
 # create parent metric for training metrics (easier interface)
