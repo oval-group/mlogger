@@ -3,7 +3,7 @@ import git
 import time
 import numpy as np
 import os
-import cPickle as pickle
+import _pickle as pickle
 import json
 
 from logger.xp import Experiment
