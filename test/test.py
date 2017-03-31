@@ -152,7 +152,7 @@ class TestExperiment(unittest.TestCase):
         xp = Experiment("my_name", log_git_hash=False)
         xp.log_config(self.config)
 
-        assert xp.config.items() == self.config.items()
+        assert list(xp.config.items()) == list(self.config.items())
 
     def test_log_git_hash(self):
 
@@ -175,9 +175,9 @@ class TestExperiment(unittest.TestCase):
 
         xp.log_with_tag('my_tag')
 
-        assert xp.logged['child1_my_tag'].values() == [0.1]
-        assert xp.logged['child2_my_tag'].values() == [0.5]
-        assert xp.logged['timer_my_tag'].values() == [1. - timer.timer.start_time]
+        assert list(xp.logged['child1_my_tag'].values()) == [0.1]
+        assert list(xp.logged['child2_my_tag'].values()) == [0.5]
+        assert list(xp.logged['timer_my_tag'].values()) == [1. - timer.timer.start_time]
 
     def test_log_metric(self):
 
@@ -192,9 +192,9 @@ class TestExperiment(unittest.TestCase):
         xp.log_metric(metrics)
         xp.log_metric(timer)
 
-        assert xp.logged['child1_my_tag'].values() == [0.1]
-        assert xp.logged['child2_my_tag'].values() == [0.5]
-        assert xp.logged['timer_my_tag'].values() == [1. - timer.timer.start_time]
+        assert list(xp.logged['child1_my_tag'].values()) == [0.1]
+        assert list(xp.logged['child2_my_tag'].values()) == [0.5]
+        assert list(xp.logged['timer_my_tag'].values()) == [1. - timer.timer.start_time]
 
     def test_get_metric(self):
 
@@ -229,12 +229,12 @@ class TestExperiment(unittest.TestCase):
         # check basic attributes
         assert my_dict['name'] == getattr(xp, 'name')
         assert my_dict['date_and_time'] == getattr(xp, 'date_and_time')
-        assert my_dict['config'].values() == getattr(xp, 'config').values()
+        assert list(my_dict['config'].values()) == list(getattr(xp, 'config').values())
 
         # check log
-        assert my_dict['logged']['child1_my_tag'].values() == [0.1]
-        assert my_dict['logged']['child2_my_tag'].values() == [0.5]
-        assert my_dict['logged']['timer_my_tag'].values() == \
+        assert list(my_dict['logged']['child1_my_tag'].values()) == [0.1]
+        assert list(my_dict['logged']['child2_my_tag'].values()) == [0.5]
+        assert list(my_dict['logged']['timer_my_tag'].values()) == \
             [1. - timer.timer.start_time]
 
         os.remove('tmp.pkl')
@@ -258,12 +258,12 @@ class TestExperiment(unittest.TestCase):
         # check basic attributes
         assert my_dict['name'] == getattr(xp, 'name')
         assert my_dict['date_and_time'] == getattr(xp, 'date_and_time')
-        assert my_dict['config'].values() == getattr(xp, 'config').values()
+        assert list(my_dict['config'].values()) == list(getattr(xp, 'config').values())
 
         # check log
-        assert my_dict['logged']['child1_my_tag'].values() == [0.1]
-        assert my_dict['logged']['child2_my_tag'].values() == [0.5]
-        assert my_dict['logged']['timer_my_tag'].values() == \
+        assert list(my_dict['logged']['child1_my_tag'].values()) == [0.1]
+        assert list(my_dict['logged']['child2_my_tag'].values()) == [0.5]
+        assert list(my_dict['logged']['timer_my_tag'].values()) == \
             [1. - timer.timer.start_time]
 
         os.remove('tmp.json')

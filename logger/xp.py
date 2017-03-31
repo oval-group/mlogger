@@ -39,7 +39,7 @@ class Experiment(object):
         if self.use_visdom:
             assert visdom is not None, "visdom could not be imported"
             # visdom env is given by Experiment name unless specified
-            if 'env' not in visdom_opts.keys():
+            if 'env' not in list(visdom_opts.keys()):
                 visdom_opts['env'] = name
             self.viz = visdom.Visdom(**visdom_opts)
             self.viz_dict = dict()
@@ -49,7 +49,7 @@ class Experiment(object):
 
     def AvgMetric(self, name, tag="default"):
 
-        assert name not in self.metrics[tag].keys(), \
+        assert name not in list(self.metrics[tag].keys()), \
             "metric with tag {} and name {} already exists".format(tag, name)
 
         metric = AvgMetric_(name, tag)
@@ -59,7 +59,7 @@ class Experiment(object):
 
     def BasicMetric(self, name, tag="default"):
 
-        assert name not in self.metrics[tag].keys(), \
+        assert name not in list(self.metrics[tag].keys()), \
             "metric with tag {} and name {} already exists".format(tag, name)
 
         metric = BasicMetric_(name, tag)
@@ -69,7 +69,7 @@ class Experiment(object):
 
     def TimeMetric(self, name, tag="default"):
 
-        assert name not in self.metrics[tag].keys(), \
+        assert name not in list(self.metrics[tag].keys()), \
             "metric with tag {} and name {} already exists".format(tag, name)
 
         metric = TimeMetric_(name, tag)
@@ -79,7 +79,7 @@ class Experiment(object):
 
     def SumMetric(self, name, tag="default"):
 
-        assert name not in self.metrics[tag].keys(), \
+        assert name not in list(self.metrics[tag].keys()), \
             "metric with tag {} and name {} already exists".format(tag, name)
 
         metric = SumMetric_(name, tag)
@@ -126,7 +126,7 @@ class Experiment(object):
 
         # gather all metrics with given tag except Parents
         # (to avoid logging twice the information)
-        metrics = (m for m in self.metrics[tag].itervalues()
+        metrics = (m for m in self.metrics[tag].values()
                    if not isinstance(m, ParentWrapper_))
 
         # log all metrics
@@ -137,7 +137,7 @@ class Experiment(object):
 
         # log only child metrics
         if isinstance(metric, ParentWrapper_):
-            for child in metric.children.itervalues():
+            for child in metric.children.values():
                 self.log_metric(child)
             return
 
@@ -149,7 +149,7 @@ class Experiment(object):
             try:
                 x = np.array([metric.timer.get()])
                 y = np.array([metric.get()])
-                if name not in self.viz_dict.keys():
+                if name not in list(self.viz_dict.keys()):
                     self.viz_dict[name] = \
                         self.viz.line(Y=y, X=x,
                                       opts={'legend': [tag],
@@ -169,7 +169,7 @@ class Experiment(object):
 
     def get_metric(self, name, tag="default"):
 
-        assert tag in self.metrics.keys() and name in self.metrics[tag].keys()
+        assert tag in list(self.metrics.keys()) and name in list(self.metrics[tag].keys())
 
         return self.metrics[tag][name]
 
@@ -178,7 +178,7 @@ class Experiment(object):
         var_dict = copy.copy(vars(self))
         var_dict.pop('metrics')
         for key in ('viz', 'viz_dict'):
-            if key in var_dict.keys():
+            if key in list(var_dict.keys()):
                 var_dict.pop(key)
         with open(filename, 'wb') as f:
             pickle.dump(var_dict, f)
@@ -188,7 +188,7 @@ class Experiment(object):
         var_dict = copy.copy(vars(self))
         var_dict.pop('metrics')
         for key in ('viz', 'viz_dict'):
-            if key in var_dict.keys():
+            if key in list(var_dict.keys()):
                 var_dict.pop(key)
-        with open(filename, 'wb') as f:
+        with open(filename, 'w') as f:
             json.dump(var_dict, f)
