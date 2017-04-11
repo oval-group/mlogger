@@ -12,7 +12,7 @@ except ImportError:
 
 from collections import defaultdict
 
-from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_
+from .metrics import SimpleMetric_, TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_
 
 
 class Experiment(object):
@@ -73,6 +73,16 @@ class Experiment(object):
             "metric with tag {} and name {} already exists".format(tag, name)
 
         metric = SumMetric_(name, tag)
+        self.metrics[tag][name] = metric
+
+        return metric
+
+    def SimpleMetric(self, name, tag="default"):
+
+        assert name not in self.metrics[tag].keys(), \
+            "metric with tag {} and name {} already exists".format(tag, name)
+
+        metric = SimpleMetric_(name, tag)
         self.metrics[tag][name] = metric
 
         return metric
