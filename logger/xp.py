@@ -57,16 +57,6 @@ class Experiment(object):
 
         return metric
 
-    def BasicMetric(self, name, tag="default"):
-
-        assert name not in self.metrics[tag].keys(), \
-            "metric with tag {} and name {} already exists".format(tag, name)
-
-        metric = BasicMetric_(name, tag)
-        self.metrics[tag][name] = metric
-
-        return metric
-
     def TimeMetric(self, name, tag="default"):
 
         assert name not in self.metrics[tag].keys(), \

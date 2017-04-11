@@ -8,7 +8,7 @@ To install the package, run:
 * `pip install -r requirements.txt` (the only requirement are `GitPython` and `numpy`, `visdom` is optional but recommended for real-time visualization)
 * `python setup.py install`.
 
-## Examples
+## Example
 An toy example can be found at `examples/example.py`:
 
 ```python
@@ -23,7 +23,7 @@ use_visdom = True
 # some hyperparameters we wish to save for this experiment
 hyperparameters = dict(regularization=1,
                        n_epochs=n_epochs)
-# options for the remote visualization backend                       
+# options for the remote visualization backend
 visdom_opts = dict(server='http://localhost',
                    port=8097)
 xp = logger.Experiment("xp_name", use_visdom=use_visdom,
@@ -68,3 +68,13 @@ xp.to_json("my_json_log.json")
 
 This generates the following plot on `visdom`:
 ![alt text](examples/example.jpg)
+
+## Supported metric inputs
+
+The value given in the `update` method of a metric must be one of the following:
+* pytorch autograd Variable with one element
+* pytorch tensor with one element
+* numpy array with one element
+* any type supported by the python `float()` function
+
+It is then converted to a python `float` number.

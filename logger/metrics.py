@@ -1,4 +1,40 @@
 import time
+import numpy as np
+
+try:
+    import torch
+    import torch.autograd as torch_autograd
+except ImportError:
+    torch = None
+    torch_autograd = None
+
+
+def to_float(val):
+    """ Check that val is one of the following:
+    - pytorch autograd Variable with one element
+    - pytorch tensor with one element
+    - numpy array with one element
+    - any type supporting float() operation
+    And convert val to float
+    """
+
+    if isinstance(val, np.ndarray):
+        assert val.size == 1, \
+            "val should have one element (got {})".format(val.size)
+        return float(val.squeeze()[0])
+
+    if torch is not None:
+        if isinstance(val, torch_autograd.Variable):
+            val = val.data
+        if torch.is_tensor(val):
+            assert torch.numel(val) == 1, \
+                "val should have one element (got {})".format(torch.numel(val))
+            return float(val.squeeze()[0])
+
+    try:
+        return float(val)
+    except:
+        raise TypeError("Unsupported type for val ({})".format(type(val)))
 
 
 class BaseTimer_(object):
@@ -15,9 +51,9 @@ class BaseTimer_(object):
         a common interface for all metrics.
         """
         if val is not None:
-            self.end_time = val
+            self.end_time = to_float(val)
         elif timed is not None:
-            self.end_time = timed
+            self.end_time = to_float(timed)
         else:
             self.end_time = time.time()
 
@@ -49,7 +85,8 @@ class BaseMetric_(object):
 
 class SimpleMetric_(BaseMetric_):
     def __init__(self, name, tag):
-        """ Stores elapsed time since last update and last reset
+        """ Stores a value and elapsed time
+        since last update and last reset
         """
         super(SimpleMetric_, self).__init__(name, tag)
         self.reset()
@@ -58,7 +95,7 @@ class SimpleMetric_(BaseMetric_):
         self.val = None
 
     def update(self, val, n=None, timed=None):
-        self.val = val
+        self.val = to_float(val)
         self.timer.update(val, n, timed)
 
     def get(self):
@@ -95,8 +132,11 @@ class Accumulator_(BaseMetric_):
         self.count = 0
         self.const = 0
 
+    def set_const(self, const):
+        self.const = to_float(const)
+
     def update(self, val, n=1, timed=None):
-        self.acc += val * n
+        self.acc += to_float(val) * n
         self.count += n
         self.timer.update(timed)
 
