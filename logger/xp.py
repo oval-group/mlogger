@@ -4,6 +4,7 @@ import time
 import cPickle as pickle
 import json
 import numpy as np
+import pprint
 
 try:
     import visdom
@@ -121,6 +122,12 @@ class Experiment(object):
     def log_config(self, config_dict):
 
         self.config.update(config_dict)
+        if self.use_visdom:
+            # format dictionary with pretty print
+            pp = pprint.PrettyPrinter(indent=4)
+            msg = pp.pformat(config_dict)
+            # display dict on visdom
+            self.vis.text(msg)
 
     def log_with_tag(self, tag):
 
