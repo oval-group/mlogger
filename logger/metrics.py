@@ -92,11 +92,11 @@ class SimpleMetric_(BaseMetric_):
         self.reset()
 
     def reset(self):
-        self.val = None
+        self.val = 0.
 
     def update(self, val, n=None, timed=None):
         self.val = to_float(val)
-        self.timer.update(val, n, timed)
+        self.timer.update(timed)
 
     def get(self):
         return self.val

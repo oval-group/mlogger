@@ -7,7 +7,7 @@ import cPickle as pickle
 import json
 
 from logger.xp import Experiment
-from logger.metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_
+from logger.metrics import TimeMetric_, AvgMetric_, SumMetric_, SimpleMetric_, ParentWrapper_
 
 
 class TestTimeMetric(unittest.TestCase):
@@ -36,6 +36,32 @@ class TestTimeMetric(unittest.TestCase):
         self.metric.update()
 
         assert self.metric.get() > value - self.start_time
+
+
+class TestSimpleMetric(unittest.TestCase):
+
+    def setUp(self):
+
+        self.name = "my_name"
+        self.tag = "my_tag"
+        self.metric = SimpleMetric_(name=self.name,
+                                    tag=self.tag)
+        self.start_time = self.metric.timer.start_time
+
+    def test_init(self):
+
+        assert self.metric.name == "my_name"
+        assert self.metric.tag == "my_tag"
+        assert self.metric.val == 0.
+
+    def test_update(self):
+
+        value = np.random.randn()
+        timed = np.random.randn()
+        self.metric.update(value, timed=(self.start_time + timed))
+
+        assert np.isclose(self.metric.get(), value)
+        assert np.isclose(self.metric.timer.get(), timed)
 
 
 class TestAvgMetric(unittest.TestCase):
