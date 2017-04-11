@@ -127,7 +127,7 @@ class Experiment(object):
             pp = pprint.PrettyPrinter(indent=4)
             msg = pp.pformat(config_dict)
             # display dict on visdom
-            self.vis.text(msg)
+            self.viz.text(msg)
 
     def log_with_tag(self, tag):
 
