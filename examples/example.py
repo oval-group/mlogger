@@ -1,12 +1,14 @@
 import logger
 import numpy as np
 
+from builtins import range
+
 
 def random_data_generator():
     """ fake data generator
     """
     n_batches = np.random.randint(1, 10)
-    for _ in xrange(n_batches):
+    for _ in range(n_batches):
         batch_size = np.random.randint(1, 5)
         data = np.random.normal(size=(batch_size, 3))
         target = np.random.randint(10, size=batch_size)

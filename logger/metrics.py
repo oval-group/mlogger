@@ -1,5 +1,7 @@
 import time
 
+from future.utils import viewitems
+
 
 class BaseTimer_(object):
     def __init__(self):
@@ -128,15 +130,15 @@ class ParentWrapper_(object):
             self.children[child.name] = child
 
     def update(self, n=1, timed=None, **kwargs):
-        for (key, value) in kwargs.iteritems():
+        for (key, value) in kwargs.items():
             self.children[key].update(value, n, timed)
 
     def reset(self):
-        for child in self.children.itervalues():
+        for child in self.children.values():
             child.reset()
 
     def get(self):
         res = dict()
-        for (name, child) in self.children.iteritems():
+        for (name, child) in viewitems(self.children):
             res[name] = child.get()
         return res
