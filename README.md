@@ -1,4 +1,4 @@
-# A simple logger for experiments
+# A simple logger for experiments [![Build Status](https://travis-ci.org/oval-group/logger.svg?branch=master)](https://travis-ci.org/oval-group/logger)
 
 Full credits to the authors of [tnt](https://github.com/pytorch/tnt) for the structure with metrics.
 
@@ -23,7 +23,7 @@ use_visdom = True
 # some hyperparameters we wish to save for this experiment
 hyperparameters = dict(regularization=1,
                        n_epochs=n_epochs)
-# options for the remote visualization backend                       
+# options for the remote visualization backend
 visdom_opts = dict(server='http://localhost',
                    port=8097)
 xp = logger.Experiment("xp_name", use_visdom=use_visdom,
