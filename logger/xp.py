@@ -4,6 +4,7 @@ import time
 import json
 import numpy as np
 import sys
+import pprint
 
 from builtins import dict
 from collections import defaultdict
@@ -111,6 +112,12 @@ class Experiment(object):
 
     def log_config(self, config_dict):
         self.config.update(config_dict)
+        if self.use_visdom:
+            # format dictionary with pretty print
+            pp = pprint.PrettyPrinter(indent=4)
+            msg = pp.pformat(config_dict)
+            # display dict on visdom
+            self.viz.text(msg)
 
     def log_with_tag(self, tag):
 
@@ -159,7 +166,9 @@ class Experiment(object):
 
     def get_metric(self, name, tag="default"):
 
-        assert tag in list(self.metrics.keys()) and name in list(self.metrics[tag].keys())
+        assert tag in list(self.metrics.keys()) \
+            and name in list(self.metrics[tag].keys()), \
+            "could not find metric with tag {} and name {}".format(tag, name)
 
         return self.metrics[tag][name]
 

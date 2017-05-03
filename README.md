@@ -8,7 +8,27 @@ To install the package, run:
 * `pip install -r requirements.txt` (the only requirement are `GitPython` and `numpy`, `visdom` is optional but recommended for real-time visualization)
 * `python setup.py install`.
 
-## Examples
+## Usage
+
+There are two types of objects in this package: `Experiment` and `Metric`. An `Experiment` instance serves as an interface, and all `Metric` objects are rattached to it (see the example below).
+
+Each metric has an `update` method that updates its internal state (e.g. current elapsed time for a `TimerMetric`, cumulated average for an `AvgMetric`), and a `reset` method to re-initialize it. The result of each metric can be fetched by the `Experiment` through the `log` methods. Note that calling `log` allows to store the result of a metric in the `Experiment` but does *not* reset the metric.
+
+Each metric is identified by `Experiment` by a name and a tag. For instance, one can choose the common tag `train` for all metrics measuring statistics on the training data, and `test` for the testing set (example below).
+
+Please see the (short) source code for details.
+
+## Supported metric inputs
+
+The value given in the `update` method of a metric must be one of the following:
+* pytorch autograd Variable with one element
+* pytorch tensor with one element
+* numpy array with one element
+* any type supported by the python `float()` function
+
+It is then converted to a python `float` number.
+
+## Example
 An toy example can be found at `examples/example.py`:
 
 ```python
@@ -42,14 +62,16 @@ val_metrics = xp.ParentWrapper(tag='val', name='parent',
                                          xp.AvgMetric(name='acck')))
 
 for epoch in range(n_epochs):
-    # reset training metrics
+    # reset metrics
     train_metrics.reset()
+    val_metrics.reset()
     # accumulate metrics over epoch
     for (x, y) in training_data():
         loss, acc1, acck = oracle(x, y)
         train_metrics.update(loss=loss, acc1=acc1,
                              acck=acck, n=len(x))
     # Method 1 for logging: log all metrics tagged with 'train'
+    # Does *not* reset them
     xp.log_with_tag('train')
 
     for (x, y) in validation_data():

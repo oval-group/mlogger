@@ -57,8 +57,9 @@ val_metrics = xp.ParentWrapper(tag='val', name='parent',
                                          xp.AvgMetric(name='acck')))
 
 for epoch in range(n_epochs):
-    # reset training metrics
+    # reset metrics
     train_metrics.reset()
+    val_metrics.reset()
     # accumulate metrics over epoch
     for (x, y) in training_data():
         loss, acc1, acck = oracle(x, y)
