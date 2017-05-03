@@ -69,8 +69,8 @@ class TestAvgMetric(unittest.TestCase):
             value, weight = values[k], weights[k]
             self.metric.update(value, n=weight)
 
-        assert np.isclose(self.metric.get(),
-                          np.sum(values * weights) / np.sum(weights))
+        np.testing.assert_allclose(self.metric.get(),
+                                   np.sum(values * weights) / np.sum(weights))
 
 
 class TestSumMetric(unittest.TestCase):
@@ -99,7 +99,7 @@ class TestSumMetric(unittest.TestCase):
             value, weight = values[k], weights[k]
             self.metric.update(value, n=weight)
 
-        assert np.isclose(self.metric.get(), np.sum(values * weights))
+        np.testing.assert_allclose(self.metric.get(), np.sum(values * weights))
 
 
 class TestParentWrapper(unittest.TestCase):
@@ -140,9 +140,10 @@ class TestParentWrapper(unittest.TestCase):
 
         res_dict = self.metric.get()
 
-        assert res_dict['time'] == value_time - self.child1.timer.start_time
-        assert res_dict['avg'] == value_avg
-        assert res_dict['sum'] == n * value_sum
+        np.testing.assert_allclose(res_dict['time'],
+                                   value_time - self.child1.timer.start_time)
+        np.testing.assert_allclose(res_dict['avg'], value_avg)
+        np.testing.assert_allclose(res_dict['sum'], n * value_sum)
 
 
 class TestExperiment(unittest.TestCase):
