@@ -1,2 +1,3 @@
 GitPython
 numpy
+future

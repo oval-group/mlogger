@@ -1,5 +1,7 @@
 import time
 
+from future.utils import viewitems
+
 
 class BaseTimer_(object):
     def __init__(self):
@@ -109,7 +111,6 @@ class AvgMetric_(Accumulator_):
         super(AvgMetric_, self).__init__(name, tag)
 
     def get(self):
-        print(self.count)
         return self.const + self.acc * 1. / self.count
 
 
@@ -138,6 +139,6 @@ class ParentWrapper_(object):
 
     def get(self):
         res = dict()
-        for (name, child) in self.children.items():
+        for (name, child) in viewitems(self.children):
             res[name] = child.get()
         return res

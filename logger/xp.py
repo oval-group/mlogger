@@ -1,18 +1,27 @@
 import copy
 import git
 import time
-import _pickle as pickle
 import json
 import numpy as np
+import sys
 
+from builtins import dict
+from collections import defaultdict
+
+from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_,\
+    SimpleMetric_
+
+# pickle for python 2 / 3
+if sys.version_info[0] == 2:
+    import cPickle as pickle
+else:
+    import pickle
+
+# optional visdom
 try:
     import visdom
 except ImportError:
     visdom = None
-
-from collections import defaultdict
-
-from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_
 
 
 class Experiment(object):
@@ -47,45 +56,27 @@ class Experiment(object):
         if log_git_hash:
             self.log_git_hash()
 
+    def NewMetric_(self, name, tag, Metric_):
+
+        assert name not in list(self.metrics[tag].keys()), \
+            "metric with tag {} and name {} already exists".format(tag, name)
+
+        metric = Metric_(name, tag)
+        self.metrics[tag][name] = metric
+
+        return metric
+
     def AvgMetric(self, name, tag="default"):
+        return self.NewMetric_(name, tag, AvgMetric_)
 
-        assert name not in list(self.metrics[tag].keys()), \
-            "metric with tag {} and name {} already exists".format(tag, name)
-
-        metric = AvgMetric_(name, tag)
-        self.metrics[tag][name] = metric
-
-        return metric
-
-    def BasicMetric(self, name, tag="default"):
-
-        assert name not in list(self.metrics[tag].keys()), \
-            "metric with tag {} and name {} already exists".format(tag, name)
-
-        metric = BasicMetric_(name, tag)
-        self.metrics[tag][name] = metric
-
-        return metric
+    def SimpleMetric(self, name, tag="default"):
+        return self.NewMetric_(name, tag, SimpleMetric_)
 
     def TimeMetric(self, name, tag="default"):
-
-        assert name not in list(self.metrics[tag].keys()), \
-            "metric with tag {} and name {} already exists".format(tag, name)
-
-        metric = TimeMetric_(name, tag)
-        self.metrics[tag][name] = metric
-
-        return metric
+        return self.NewMetric_(name, tag, TimeMetric_)
 
     def SumMetric(self, name, tag="default"):
-
-        assert name not in list(self.metrics[tag].keys()), \
-            "metric with tag {} and name {} already exists".format(tag, name)
-
-        metric = SumMetric_(name, tag)
-        self.metrics[tag][name] = metric
-
-        return metric
+        return self.NewMetric_(name, tag, SumMetric_)
 
     def ParentWrapper(self, name, tag="default", children=()):
 
@@ -119,7 +110,6 @@ class Experiment(object):
                   "and parent directories but did not find any.")
 
     def log_config(self, config_dict):
-
         self.config.update(config_dict)
 
     def log_with_tag(self, tag):

@@ -10,4 +10,5 @@ setup(name='logger',
       url='https://github.com/oval-group/logger',
       version=str(__version__),
       install_requires=["GitPython",
-                        "numpy"])
+                        "numpy",
+                        "future"])

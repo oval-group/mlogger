@@ -1,6 +1,8 @@
 import logger
 import numpy as np
 
+from builtins import range
+
 
 def random_data_generator():
     """ fake data generator

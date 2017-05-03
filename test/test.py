@@ -3,11 +3,16 @@ import git
 import time
 import numpy as np
 import os
-import _pickle as pickle
 import json
+import sys
 
 from logger.xp import Experiment
 from logger.metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_
+
+if sys.version_info[0] == 2:
+    import cPickle as pickle
+else:
+    import pickle
 
 
 class TestTimeMetric(unittest.TestCase):
@@ -177,7 +182,8 @@ class TestExperiment(unittest.TestCase):
 
         assert list(xp.logged['child1_my_tag'].values()) == [0.1]
         assert list(xp.logged['child2_my_tag'].values()) == [0.5]
-        assert list(xp.logged['timer_my_tag'].values()) == [1. - timer.timer.start_time]
+        assert list(xp.logged['timer_my_tag'].values()) == \
+            [1. - timer.timer.start_time]
 
     def test_log_metric(self):
 
@@ -194,7 +200,8 @@ class TestExperiment(unittest.TestCase):
 
         assert list(xp.logged['child1_my_tag'].values()) == [0.1]
         assert list(xp.logged['child2_my_tag'].values()) == [0.5]
-        assert list(xp.logged['timer_my_tag'].values()) == [1. - timer.timer.start_time]
+        assert list(xp.logged['timer_my_tag'].values()) == \
+            [1. - timer.timer.start_time]
 
     def test_get_metric(self):
 
@@ -223,13 +230,14 @@ class TestExperiment(unittest.TestCase):
         xp.log_with_tag('my_tag')
         xp.to_pickle('tmp.pkl')
 
-        with open('tmp.pkl', 'r') as tmp:
+        with open('tmp.pkl', 'rb') as tmp:
             my_dict = pickle.load(tmp)
 
         # check basic attributes
         assert my_dict['name'] == getattr(xp, 'name')
         assert my_dict['date_and_time'] == getattr(xp, 'date_and_time')
-        assert list(my_dict['config'].values()) == list(getattr(xp, 'config').values())
+        assert list(my_dict['config'].values()) == \
+            list(getattr(xp, 'config').values())
 
         # check log
         assert list(my_dict['logged']['child1_my_tag'].values()) == [0.1]
@@ -258,7 +266,8 @@ class TestExperiment(unittest.TestCase):
         # check basic attributes
         assert my_dict['name'] == getattr(xp, 'name')
         assert my_dict['date_and_time'] == getattr(xp, 'date_and_time')
-        assert list(my_dict['config'].values()) == list(getattr(xp, 'config').values())
+        assert list(my_dict['config'].values()) == \
+            list(getattr(xp, 'config').values())
 
         # check log
         assert list(my_dict['logged']['child1_my_tag'].values()) == [0.1]
