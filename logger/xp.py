@@ -7,10 +7,10 @@ import sys
 import pprint
 
 from builtins import dict
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_,\
-    SimpleMetric_
+    SimpleMetric_, BestMetric_
 
 # pickle for python 2 / 3
 if sys.version_info[0] == 2:
@@ -40,7 +40,7 @@ class Experiment(object):
         self.name = name
         self.date_and_time = time.strftime('%d-%m-%Y--%H-%M-%S')
 
-        self.logged = defaultdict(dict)
+        self.logged = defaultdict(OrderedDict)
         self.metrics = defaultdict(dict)
 
         self.config = dict()
@@ -57,12 +57,12 @@ class Experiment(object):
         if log_git_hash:
             self.log_git_hash()
 
-    def NewMetric_(self, name, tag, Metric_):
+    def NewMetric_(self, name, tag, Metric_, **kwargs):
 
         assert name not in list(self.metrics[tag].keys()), \
             "metric with tag {} and name {} already exists".format(tag, name)
 
-        metric = Metric_(name, tag)
+        metric = Metric_(name, tag, **kwargs)
         self.metrics[tag][name] = metric
 
         return metric
@@ -78,6 +78,9 @@ class Experiment(object):
 
     def SumMetric(self, name, tag="default"):
         return self.NewMetric_(name, tag, SumMetric_)
+
+    def BestMetric(self, name, tag="default", mode="max"):
+        return self.NewMetric_(name, tag, BestMetric_, mode)
 
     def ParentWrapper(self, name, tag="default", children=()):
 

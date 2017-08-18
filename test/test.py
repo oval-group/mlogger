@@ -8,7 +8,7 @@ import sys
 
 from logger.xp import Experiment
 from logger.metrics import TimeMetric_, AvgMetric_, SumMetric_, SimpleMetric_, \
-    ParentWrapper_
+    ParentWrapper_, BestMetric_
 
 if sys.version_info[0] == 2:
     import cPickle as pickle
@@ -68,6 +68,71 @@ class TestSimpleMetric(unittest.TestCase):
 
         assert np.isclose(self.metric.get(), value)
         assert np.isclose(self.metric.timer.get(), timed)
+
+
+class TestBestMetric(unittest.TestCase):
+
+    def setUp(self):
+
+        self.name = "my_name"
+        self.tag = "my_tag"
+        self.metric_min = BestMetric_(name=self.name,
+                                      tag=self.tag,
+                                      mode="min")
+        self.metric_max = BestMetric_(name=self.name,
+                                      tag=self.tag,
+                                      mode="max")
+        self.start_time_min = self.metric_min.timer.start_time
+        self.start_time_max = self.metric_max.timer.start_time
+
+    def test_init(self):
+
+        assert self.metric_min.name == "my_name"
+        assert self.metric_min.tag == "my_tag"
+        assert self.metric_min.val == np.inf
+
+        assert self.metric_max.name == "my_name"
+        assert self.metric_max.tag == "my_tag"
+        assert self.metric_max.val == -np.inf
+
+    def test_update(self):
+
+        value = np.random.randn()
+        value_greater = value + 1
+        value_lower = value - 1
+        timed = np.random.randn()
+        timed_greater = np.random.randn()
+        timed_lower = np.random.randn()
+
+        self.metric_min.update(value,
+                               timed=(self.start_time_min + timed))
+        assert np.isclose(self.metric_min.get(), value)
+        assert np.isclose(self.metric_min.timer.get(), timed)
+
+        self.metric_min.update(value_greater,
+                               timed=(self.start_time_min + timed_greater))
+        assert np.isclose(self.metric_min.get(), value)
+        assert np.isclose(self.metric_min.timer.get(), timed_greater)
+
+        self.metric_min.update(value_lower,
+                               timed=(self.start_time_min + timed_lower))
+        assert np.isclose(self.metric_min.get(), value_lower)
+        assert np.isclose(self.metric_min.timer.get(), timed_lower)
+
+        self.metric_max.update(value,
+                               timed=(self.start_time_max + timed))
+        assert np.isclose(self.metric_max.get(), value)
+        assert np.isclose(self.metric_max.timer.get(), timed)
+
+        self.metric_max.update(value_lower,
+                               timed=(self.start_time_max + timed_lower))
+        assert np.isclose(self.metric_max.get(), value)
+        assert np.isclose(self.metric_max.timer.get(), timed_lower)
+
+        self.metric_max.update(value_greater,
+                               timed=(self.start_time_max + timed_greater))
+        assert np.isclose(self.metric_max.get(), value_greater)
+        assert np.isclose(self.metric_max.timer.get(), timed_greater)
 
 
 class TestAvgMetric(unittest.TestCase):

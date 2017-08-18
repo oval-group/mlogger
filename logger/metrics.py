@@ -120,6 +120,26 @@ class TimeMetric_(BaseMetric_):
         return self.timer.get()
 
 
+class BestMetric_(BaseMetric_):
+    def __init__(self, name, tag, mode='max'):
+        assert mode in ('min', 'max')
+        super(BestMetric_, self).__init__(name, tag)
+        self.mode = 1 if mode == 'max' else -1
+        self.reset()
+
+    def reset(self):
+        self.val = -self.mode * np.inf
+
+    def update(self, val, n=None, timed=None):
+        val = to_float(val)
+        if self.mode * val > self.mode * self.val:
+            self.val = val
+        self.timer.update(timed)
+
+    def get(self):
+        return self.val
+
+
 class Accumulator_(BaseMetric_):
     """
     Accumulator.
