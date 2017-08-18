@@ -80,7 +80,7 @@ class Experiment(object):
         return self.NewMetric_(name, tag, SumMetric_)
 
     def BestMetric(self, name, tag="default", mode="max"):
-        return self.NewMetric_(name, tag, BestMetric_, mode)
+        return self.NewMetric_(name, tag, BestMetric_, mode=mode)
 
     def ParentWrapper(self, name, tag="default", children=()):
 
