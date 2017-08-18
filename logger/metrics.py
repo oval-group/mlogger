@@ -71,6 +71,17 @@ class BaseMetric_(object):
         self.tag = tag
         self.name = name
         self.timer = BaseTimer_()
+        self.reset_hooks()
+
+    def reset_hooks(self):
+        self.hooks = ()
+
+    def add_hook(self, hook):
+        self.hooks += (hook,)
+
+    def hook(self):
+        for hook in self.hooks:
+            hook()
 
     def reset(self):
         raise NotImplementedError("reset should be re-implemented "
@@ -99,6 +110,7 @@ class SimpleMetric_(BaseMetric_):
     def update(self, val, n=None, timed=None):
         self.val = to_float(val)
         self.timer.update(timed)
+        self.hook()
 
     def get(self):
         return self.val
@@ -115,6 +127,7 @@ class TimeMetric_(BaseMetric_):
 
     def update(self, val=None, n=None, timed=None):
         self.timer.update(val, n, timed)
+        self.hook()
 
     def get(self):
         return self.timer.get()
@@ -134,6 +147,7 @@ class BestMetric_(BaseMetric_):
         val = to_float(val)
         if self.mode * val > self.mode * self.val:
             self.val = val
+            self.hook()
         self.timer.update(timed)
 
     def get(self):
@@ -161,6 +175,7 @@ class Accumulator_(BaseMetric_):
         self.acc += to_float(val) * n
         self.count += n
         self.timer.update(timed)
+        self.hook()
 
     def get(self):
         raise NotImplementedError("Accumulator should be subclassed")

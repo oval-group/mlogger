@@ -37,7 +37,8 @@ class Experiment(object):
 
         super(Experiment, self).__init__()
 
-        self.name = name
+        self.name = name.split('/')[-1]
+        self.name_and_dir = name
         self.date_and_time = time.strftime('%d-%m-%Y--%H-%M-%S')
 
         self.logged = defaultdict(OrderedDict)
@@ -50,7 +51,7 @@ class Experiment(object):
             assert visdom is not None, "visdom could not be imported"
             # visdom env is given by Experiment name unless specified
             if 'env' not in list(visdom_opts.keys()):
-                visdom_opts['env'] = name
+                visdom_opts['env'] = self.name
             self.viz = visdom.Visdom(**visdom_opts)
             self.viz_dict = dict()
 
