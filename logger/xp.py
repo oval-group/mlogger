@@ -48,15 +48,18 @@ class Experiment(object):
         self.use_visdom = use_visdom
 
         if self.use_visdom:
-            assert visdom is not None, "visdom could not be imported"
-            # visdom env is given by Experiment name unless specified
-            if 'env' not in list(visdom_opts.keys()):
-                visdom_opts['env'] = self.name
-            self.viz = visdom.Visdom(**visdom_opts)
-            self.viz_dict = dict()
+            self._visdom(visdom_opts)
 
         if log_git_hash:
             self.log_git_hash()
+
+    def _visdom(self, visdom_opts):
+        assert visdom is not None, "visdom could not be imported"
+        # visdom env is given by Experiment name unless specified
+        if 'env' not in list(visdom_opts.keys()):
+            visdom_opts['env'] = self.name
+        self.viz = visdom.Visdom(**visdom_opts)
+        self.viz_dict = dict()
 
     def NewMetric_(self, name, tag, Metric_, **kwargs):
 
@@ -195,3 +198,57 @@ class Experiment(object):
                 var_dict.pop(key)
         with open(filename, 'w') as f:
             json.dump(var_dict, f)
+
+    def from_pickle(self, filename):
+        assert filename.endswith(".pickle")
+
+        with open(filename, 'r') as f:
+            my_dict = pickle.load(f)
+            my_dict = dict_process(my_dict)
+        self.__dict__.update(my_dict)
+
+    def from_json(self, filename):
+        assert filename.endswith(".json")
+        with open(filename, 'r') as f:
+            my_dict = json.load(f, object_pairs_hook=OrderedDict)
+            my_dict = dict_process(my_dict)
+        self.__dict__.update(my_dict)
+
+    def to_visdom(self, visdom_opts={}):
+        self._visdom(visdom_opts)
+        # format dictionary with pretty print
+        pp = pprint.PrettyPrinter(indent=4)
+        msg = pp.pformat(self.config)
+        # display dict on visdom
+        self.viz.text(msg)
+        for tag in self.logged.keys():
+            for name in self.logged[tag].keys():
+                xy = self.logged[tag][name]
+                x = np.array(xy.keys()).astype(np.float)
+                y = np.array(xy.values())
+                if name not in list(self.viz_dict.keys()):
+                    self.viz_dict[name] = \
+                        self.viz.line(Y=y, X=x,
+                                      opts={'legend': [tag],
+                                            'title': name,
+                                            'xlabel': 'Time (s)'})
+                else:
+                    self.viz.updateTrace(Y=y, X=x,
+                                         name=tag,
+                                         win=self.viz_dict[name],
+                                         append=True)
+
+
+def dict_process(my_dict):
+    logged = defaultdict(OrderedDict)
+    for key in my_dict['logged'].keys():
+        splitted = key.split('_')
+        name, tag = '_'.join(splitted[:-1]), splitted[-1]
+        values = my_dict['logged'].pop(key)
+        # sort values based on x-value
+        values = sorted(values.items(), key=lambda x: float(x[0]))
+        logged[tag][name] = OrderedDict(values)
+    my_dict['logged'] = logged
+    # no need for an ordered dictionary for config
+    my_dict['config'] = dict(my_dict['config'])
+    return my_dict
