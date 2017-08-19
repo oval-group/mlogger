@@ -112,7 +112,11 @@ class Experiment(object):
 
         try:
             repo = git.Repo(search_parent_directories=True)
-            self.log_config({'git_hash': repo.head.object.hexsha})
+            git_hash = repo.head.object.hexsha
+            head = repo.head.commit.tree
+            git_diff = repo.git.diff(head)
+            self.log_config(dict(git_hash=git_hash,
+                                 git_diff=git_diff))
         except:
             print("I tried to find a git repository in current "
                   "and parent directories but did not find any.")
