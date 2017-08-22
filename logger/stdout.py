@@ -7,9 +7,15 @@ class Console(object):
         self.log = open(filename, 'a')
 
     def __enter__(self):
-        sys.stdout = self
+        self.start()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
+    def start(self):
+        sys.stdout = self
+
+    def stop(self):
         self.log.close()
         sys.stdout = self.terminal
 

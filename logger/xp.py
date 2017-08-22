@@ -116,14 +116,15 @@ class Experiment(object):
             head = repo.head.commit.tree
             git_diff = repo.git.diff(head)
             self.log_config(dict(git_hash=git_hash,
-                                 git_diff=git_diff))
+                                 git_diff=git_diff),
+                            to_visdom=False)
         except:
             print("I tried to find a git repository in current "
                   "and parent directories but did not find any.")
 
-    def log_config(self, config_dict):
+    def log_config(self, config_dict, to_visdom=True):
         self.config.update(config_dict)
-        if self.use_visdom:
+        if to_visdom and self.use_visdom:
             # format dictionary with pretty print
             pp = pprint.PrettyPrinter(indent=4)
             msg = pp.pformat(config_dict)
