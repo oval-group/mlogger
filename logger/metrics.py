@@ -197,9 +197,9 @@ class SumMetric_(Accumulator_):
         return self.const + self.acc
 
 
-class ParentWrapper_(object):
-    def __init__(self, children):
-        super(ParentWrapper_, self).__init__()
+class ParentWrapper_(BaseMetric_):
+    def __init__(self, name, tag, children):
+        super(ParentWrapper_, self).__init__(name, tag)
         self.children = dict()
         for child in children:
             self.children[child.name] = child
@@ -217,3 +217,29 @@ class ParentWrapper_(object):
         for (name, child) in viewitems(self.children):
             res[name] = child.get()
         return res
+
+
+class DynamicMetric_(BaseMetric_):
+    def __init__(self, name, tag, fun=None):
+        """ Stores a value and elapsed time
+        since last update and last reset
+        """
+        super(SimpleMetric_, self).__init__(name, tag)
+        self.reset()
+        if fun is not None:
+            self.set_fun(fun)
+
+    def reset(self):
+        self.hook = lambda: None
+        self.val = None
+
+    def update(self, timed=None):
+        self.val = self.fun()
+        self.timer.update(timed)
+        self.hook()
+
+    def set_fun(self, fun):
+        self.fun = fun
+
+    def get(self):
+        return self.val

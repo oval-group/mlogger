@@ -10,7 +10,7 @@ from builtins import dict
 from collections import defaultdict, OrderedDict
 
 from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_,\
-    SimpleMetric_, BestMetric_
+    SimpleMetric_, BestMetric_, DynamicMetric_
 
 # pickle for python 2 / 3
 if sys.version_info[0] == 2:
@@ -69,6 +69,12 @@ class Experiment(object):
         metric = Metric_(name, tag, **kwargs)
         self.metrics[tag][name] = metric
 
+        attr_name = name if tag == "default" else "{}_{}".format(name, tag)
+        # set attribute in title format for metric
+        setattr(self, attr_name.title(), metric)
+        # set property in lower format for dynamic value of metric
+        setattr(Experiment, attr_name.lower(), property(metric.get))
+
         return metric
 
     def AvgMetric(self, name, tag="default"):
@@ -86,27 +92,23 @@ class Experiment(object):
     def BestMetric(self, name, tag="default", mode="max"):
         return self.NewMetric_(name, tag, BestMetric_, mode=mode)
 
+    def DynamicMetric(self, name, tag="default", fun=None):
+        return self.NewMetric_(name, tag, DynamicMetric_, fun=fun)
+
     def ParentWrapper(self, name, tag="default", children=()):
 
         for child in children:
-
             # continue if child tag is same as parent's
             if child.tag == tag:
                 continue
-
             # else remove child from previous tagging
             self.metrics[child.tag].pop(child.name)
-
             # update child's tag
             child.tag = tag
-
             # update tagging
             self.metrics[child.tag][child.name] = child
 
-        metric = ParentWrapper_(children)
-        self.metrics[tag][name] = metric
-
-        return metric
+        return self.NewMetric_(name, tag, ParentWrapper_, children=children)
 
     def log_git_hash(self):
 
