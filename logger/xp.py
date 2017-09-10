@@ -70,10 +70,18 @@ class Experiment(object):
         self.metrics[tag][name] = metric
 
         attr_name = name if tag == "default" else "{}_{}".format(name, tag)
+        if attr_name.title() in list(self.__dict__.keys()) or \
+                attr_name.lower() in list(self.__dict__.keys()):
+            raise ValueError("Combination of tag '{}' and name '{}' invalid:\n"
+                             "would override current attribute {} or {}"
+                             .format(tag, name, attr_name.title(),
+                                     attr_name.lower()))
+
         # set attribute in title format for metric
         setattr(self, attr_name.title(), metric)
         # set property in lower format for dynamic value of metric
-        setattr(Experiment, attr_name.lower(), property(metric.get))
+        setattr(Experiment, attr_name.lower(),
+                property(lambda x: metric.get()))
 
         return metric
 
