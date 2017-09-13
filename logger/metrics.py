@@ -221,16 +221,15 @@ class ParentWrapper_(BaseMetric_):
 
 class DynamicMetric_(BaseMetric_):
     def __init__(self, name, tag, fun=None):
-        """ Stores a value and elapsed time
-        since last update and last reset
         """
-        super(SimpleMetric_, self).__init__(name, tag)
+        """
+        super(DynamicMetric_, self).__init__(name, tag)
         self.reset()
         if fun is not None:
             self.set_fun(fun)
 
     def reset(self):
-        self.hook = lambda: None
+        self.fun = lambda: None
         self.val = None
 
     def update(self, timed=None):

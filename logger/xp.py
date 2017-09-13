@@ -5,6 +5,7 @@ import json
 import numpy as np
 import sys
 import pprint
+import warnings
 
 from builtins import dict
 from collections import defaultdict, OrderedDict
@@ -62,27 +63,8 @@ class Experiment(object):
         self.viz_dict = dict()
 
     def NewMetric_(self, name, tag, Metric_, **kwargs):
-
-        assert name not in list(self.metrics[tag].keys()), \
-            "metric with tag {} and name {} already exists".format(tag, name)
-
         metric = Metric_(name, tag, **kwargs)
-        self.metrics[tag][name] = metric
-
-        attr_name = name if tag == "default" else "{}_{}".format(name, tag)
-        if attr_name.title() in list(self.__dict__.keys()) or \
-                attr_name.lower() in list(self.__dict__.keys()):
-            raise ValueError("Combination of tag '{}' and name '{}' invalid:\n"
-                             "would override current attribute {} or {}"
-                             .format(tag, name, attr_name.title(),
-                                     attr_name.lower()))
-
-        # set attribute in title format for metric
-        setattr(self, attr_name.title(), metric)
-        # set property in lower format for dynamic value of metric
-        setattr(Experiment, attr_name.lower(),
-                property(lambda x: metric.get()))
-
+        self.register_metric(metric)
         return metric
 
     def AvgMetric(self, name, tag="default"):
@@ -109,14 +91,48 @@ class Experiment(object):
             # continue if child tag is same as parent's
             if child.tag == tag:
                 continue
-            # else remove child from previous tagging
-            self.metrics[child.tag].pop(child.name)
+            # else remove child from previous tagging and attribute
+            self.remove_metric(child)
             # update child's tag
             child.tag = tag
-            # update tagging
-            self.metrics[child.tag][child.name] = child
+            # register child again
+            self.register_metric(child)
 
         return self.NewMetric_(name, tag, ParentWrapper_, children=children)
+
+    def register_metric(self, metric):
+
+        assert metric.name not in list(self.metrics[metric.tag].keys()), \
+            "metric with tag {} and name {} already exists" \
+            .format(metric.tag, metric.name)
+
+        self.metrics[metric.tag][metric.name] = metric
+
+        if metric.tag == "default":
+            attr_name = metric.name
+        else:
+            attr_name = "{}_{}".format(metric.name, metric.tag)
+        if attr_name.title() in list(self.__dict__.keys()) or \
+                attr_name.lower() in list(self.__dict__.keys()):
+            warnings.warn("Combination of tag '{}' and name '{}' will"
+                          "override an existing attribute"
+                          .format(metric.tag, metric.name))
+
+        # set attribute in title format for metric
+        setattr(self, attr_name.title(), metric)
+        # set property in lower format for dynamic value of metric
+        setattr(Experiment, attr_name.lower(),
+                property(lambda x: metric.get()))
+
+    def remove_metric(self, metric):
+        self.metrics[metric.tag].pop(metric.name)
+
+        if metric.tag == "default":
+            attr_name = metric.name
+        else:
+            attr_name = "{}_{}".format(metric.name, metric.tag)
+        delattr(self, attr_name.title())
+        delattr(Experiment, attr_name.lower())
 
     def log_git_hash(self):
 
@@ -194,23 +210,24 @@ class Experiment(object):
 
         return self.metrics[tag][name]
 
+    def get_var_dict(self):
+        var_dict = {}
+        var_dict['config'] = self.config
+        var_dict['logged'] = self.logged
+        var_dict['name'] = self.name
+        var_dict['name_and_dir'] = self.name_and_dir
+        var_dict['date_and_time'] = self.date_and_time
+        return var_dict
+
     def to_pickle(self, filename):
 
-        var_dict = copy.copy(vars(self))
-        var_dict.pop('metrics')
-        for key in ('viz', 'viz_dict'):
-            if key in list(var_dict.keys()):
-                var_dict.pop(key)
+        var_dict = self.get_var_dict()
         with open(filename, 'wb') as f:
             pickle.dump(var_dict, f)
 
     def to_json(self, filename):
 
-        var_dict = copy.copy(vars(self))
-        var_dict.pop('metrics')
-        for key in ('viz', 'viz_dict'):
-            if key in list(var_dict.keys()):
-                var_dict.pop(key)
+        var_dict = self.get_var_dict()
         with open(filename, 'w') as f:
             json.dump(var_dict, f)
 
@@ -236,8 +253,8 @@ class Experiment(object):
         msg = pp.pformat(self.config)
         # display dict on visdom
         self.viz.text(msg)
-        for tag in self.logged.keys():
-            for name in self.logged[tag].keys():
+        for tag in sorted(self.logged.keys()):
+            for name in sorted(self.logged[tag].keys()):
                 xy = self.logged[tag][name]
                 x = np.array(xy.keys()).astype(np.float)
                 y = np.array(xy.values())
