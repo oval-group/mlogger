@@ -64,6 +64,7 @@ class Experiment(object):
 
     def NewMetric_(self, name, tag, Metric_, **kwargs):
         metric = Metric_(name, tag, **kwargs)
+        setattr(metric, 'log', lambda: self.log_metric(metric))
         self.register_metric(metric)
         return metric
 
