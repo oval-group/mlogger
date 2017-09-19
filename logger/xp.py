@@ -64,7 +64,6 @@ class Experiment(object):
 
     def NewMetric_(self, name, tag, Metric_, **kwargs):
         metric = Metric_(name, tag, **kwargs)
-        setattr(metric, 'log', lambda: self.log_metric(metric))
         self.register_metric(metric)
         return metric
 
@@ -106,6 +105,8 @@ class Experiment(object):
         assert metric.name not in list(self.metrics[metric.tag].keys()), \
             "metric with tag {} and name {} already exists" \
             .format(metric.tag, metric.name)
+
+        setattr(metric, 'log', lambda: self.log_metric(metric))
 
         self.metrics[metric.tag][metric.name] = metric
 
@@ -251,7 +252,10 @@ class Experiment(object):
         self._visdom(visdom_opts)
         # format dictionary with pretty print
         pp = pprint.PrettyPrinter(indent=4)
-        msg = pp.pformat(self.config)
+        config = self.config.copy()
+        if 'git_diff' in config.keys():
+            config.pop('git_diff')
+        msg = pp.pformat(config)
         # display dict on visdom
         self.viz.text(msg)
         for tag in sorted(self.logged.keys()):
