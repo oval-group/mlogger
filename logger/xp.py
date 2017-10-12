@@ -28,7 +28,7 @@ except ImportError:
 class Experiment(object):
 
     def __init__(self, name, log_git_hash=True,
-                 use_visdom=False, visdom_opts={}):
+                 use_visdom=False, visdom_opts=None):
         """ Create an experiment with the following parameters:
         - log_git_hash (bool): retrieve current commit hash to log code status
         - use_visdom (bool): monitor metrics logged on visdom
@@ -49,6 +49,8 @@ class Experiment(object):
         if self.use_visdom:
             assert visdom is not None, "visdom could not be imported"
             # visdom env is given by Experiment name unless specified
+            if visdom_opts is None:
+                visdom_opts = {}
             if 'env' not in list(visdom_opts.keys()):
                 visdom_opts['env'] = name
             self.viz = visdom.Visdom(**visdom_opts)
