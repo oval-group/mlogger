@@ -209,7 +209,8 @@ class TestParentWrapper(unittest.TestCase):
 
         self.children = (self.child1, self.child2, self.child3)
 
-        self.metric = ParentWrapper_(children=self.children)
+        self.metric = ParentWrapper_(name="parent", tag=self.tag,
+                                     children=self.children)
 
     def test_init(self):
 

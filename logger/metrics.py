@@ -1,76 +1,23 @@
-import time
 import numpy as np
-
-try:
-    import torch
-    import torch.autograd as torch_autograd
-except ImportError:
-    torch = None
-    torch_autograd = None
-
-
-def to_float(val):
-    """ Check that val is one of the following:
-    - pytorch autograd Variable with one element
-    - pytorch tensor with one element
-    - numpy array with one element
-    - any type supporting float() operation
-    And convert val to float
-    """
-
-    if isinstance(val, np.ndarray):
-        assert val.size == 1, \
-            "val should have one element (got {})".format(val.size)
-        return float(val.squeeze()[0])
-
-    if torch is not None:
-        if isinstance(val, torch_autograd.Variable):
-            val = val.data
-        if torch.is_tensor(val):
-            assert torch.numel(val) == 1, \
-                "val should have one element (got {})".format(torch.numel(val))
-            return float(val.squeeze()[0])
-
-    try:
-        return float(val)
-    except:
-        raise TypeError("Unsupported type for val ({})".format(type(val)))
 
 from future.utils import viewitems
 
-
-class BaseTimer_(object):
-    def __init__(self):
-        super(BaseTimer_, self).__init__()
-        self.reset()
-
-    def reset(self):
-        self.start_time = time.time()
-        self.end_time = self.start_time
-
-    def update(self, val=None, n=None, timed=None):
-        """ 'val' and 'timed' are redundant here in order to have
-        a common interface for all metrics.
-        """
-        if val is not None:
-            self.end_time = to_float(val)
-        elif timed is not None:
-            self.end_time = to_float(timed)
-        else:
-            self.end_time = time.time()
-
-    def get(self):
-        return self.end_time - self.start_time
+from .indexer import TimeIndexer_, ValueIndexer_
+from .utils import to_float
 
 
 class BaseMetric_(object):
-    def __init__(self, name, tag):
+    def __init__(self, name, tag, time_idx):
         """ Basic metric
         Includes a timer.
         """
         self.tag = tag
         self.name = name
-        self.timer = BaseTimer_()
+        if time_idx:
+            self.index = TimeIndexer_()
+        else:
+            self.index = ValueIndexer_()
+        self.time_idx = time_idx
         self.reset_hooks()
 
     def reset_hooks(self):
@@ -87,7 +34,7 @@ class BaseMetric_(object):
         raise NotImplementedError("reset should be re-implemented "
                                   "for each metric")
 
-    def update(self, val, n=None, timed=None):
+    def update(self, val, n=None, idx=None):
         raise NotImplementedError("update should be re-implemented "
                                   "for each metric")
 
@@ -95,21 +42,29 @@ class BaseMetric_(object):
         raise NotImplementedError("get should be re-implemented "
                                   "for each metric")
 
+    def name_id(self):
+        if self.tag == "default":
+            name_id = self.name
+        else:
+            name_id = "{}_{}".format(self.name, self.tag)
+        name_id = name_id.lower()
+        return name_id
+
 
 class SimpleMetric_(BaseMetric_):
-    def __init__(self, name, tag):
+    def __init__(self, name, tag, time_idx=True):
         """ Stores a value and elapsed time
         since last update and last reset
         """
-        super(SimpleMetric_, self).__init__(name, tag)
+        super(SimpleMetric_, self).__init__(name, tag, time_idx)
         self.reset()
 
     def reset(self):
         self.val = 0.
 
-    def update(self, val, n=None, timed=None):
+    def update(self, val, n=None, idx=None):
         self.val = to_float(val)
-        self.timer.update(timed)
+        self.index.update(idx)
         self.hook()
 
     def get(self):
@@ -120,13 +75,15 @@ class TimeMetric_(BaseMetric_):
     def __init__(self, name, tag):
         """ Stores elapsed time since last update and last reset
         """
-        super(TimeMetric_, self).__init__(name, tag)
+        super(TimeMetric_, self).__init__(name, tag, time_idx=True)
+        self.timer = TimeIndexer_()
 
     def reset(self):
         self.timer.reset()
 
-    def update(self, val=None, n=None, timed=None):
-        self.timer.update(val, n, timed)
+    def update(self, val=None, n=None, idx=None):
+        self.timer.update(val)
+        self.index.update(idx)
         self.hook()
 
     def get(self):
@@ -134,21 +91,21 @@ class TimeMetric_(BaseMetric_):
 
 
 class BestMetric_(BaseMetric_):
-    def __init__(self, name, tag, mode='max'):
+    def __init__(self, name, tag, mode='max', time_idx=True):
         assert mode in ('min', 'max')
-        super(BestMetric_, self).__init__(name, tag)
+        super(BestMetric_, self).__init__(name, tag, time_idx)
         self.mode = 1 if mode == 'max' else -1
         self.reset()
 
     def reset(self):
         self.val = -self.mode * np.inf
 
-    def update(self, val, n=None, timed=None):
+    def update(self, val, n=None, idx=None):
         val = to_float(val)
         if self.mode * val > self.mode * self.val:
             self.val = val
             self.hook()
-        self.timer.update(timed)
+        self.index.update(idx)
 
     def get(self):
         return self.val
@@ -159,8 +116,8 @@ class Accumulator_(BaseMetric_):
     Accumulator.
     Credits to the authors of pytorch/tnt for this.
     """
-    def __init__(self, name, tag):
-        super(Accumulator_, self).__init__(name, tag)
+    def __init__(self, name, tag, time_idx=True):
+        super(Accumulator_, self).__init__(name, tag, time_idx)
         self.reset()
 
     def reset(self):
@@ -171,10 +128,10 @@ class Accumulator_(BaseMetric_):
     def set_const(self, const):
         self.const = to_float(const)
 
-    def update(self, val, n=1, timed=None):
+    def update(self, val, n=1, idx=None):
         self.acc += to_float(val) * n
         self.count += n
-        self.timer.update(timed)
+        self.index.update(idx)
         self.hook()
 
     def get(self):
@@ -182,31 +139,31 @@ class Accumulator_(BaseMetric_):
 
 
 class AvgMetric_(Accumulator_):
-    def __init__(self, name, tag):
-        super(AvgMetric_, self).__init__(name, tag)
+    def __init__(self, name, tag, time_idx=True):
+        super(AvgMetric_, self).__init__(name, tag, time_idx)
 
     def get(self):
         return self.const + self.acc * 1. / self.count
 
 
 class SumMetric_(Accumulator_):
-    def __init__(self, name, tag):
-        super(SumMetric_, self).__init__(name, tag)
+    def __init__(self, name, tag, time_idx=True):
+        super(SumMetric_, self).__init__(name, tag, time_idx)
 
     def get(self):
         return self.const + self.acc
 
 
 class ParentWrapper_(BaseMetric_):
-    def __init__(self, name, tag, children):
-        super(ParentWrapper_, self).__init__(name, tag)
+    def __init__(self, name, tag, children, time_idx=True):
+        super(ParentWrapper_, self).__init__(name, tag, time_idx)
         self.children = dict()
         for child in children:
             self.children[child.name] = child
 
-    def update(self, n=1, timed=None, **kwargs):
+    def update(self, n=1, idx=None, **kwargs):
         for (key, value) in kwargs.items():
-            self.children[key].update(value, n, timed)
+            self.children[key].update(value, n, idx)
 
     def reset(self):
         for child in self.children.values():
@@ -220,10 +177,10 @@ class ParentWrapper_(BaseMetric_):
 
 
 class DynamicMetric_(BaseMetric_):
-    def __init__(self, name, tag, fun=None):
+    def __init__(self, name, tag, fun=None, time_idx=True):
         """
         """
-        super(DynamicMetric_, self).__init__(name, tag)
+        super(DynamicMetric_, self).__init__(name, tag, time_idx)
         self.reset()
         if fun is not None:
             self.set_fun(fun)
@@ -232,9 +189,9 @@ class DynamicMetric_(BaseMetric_):
         self.fun = lambda: None
         self.val = None
 
-    def update(self, timed=None):
+    def update(self, idx=None):
         self.val = self.fun()
-        self.timer.update(timed)
+        self.index.update(idx)
         self.hook()
 
     def set_fun(self, fun):
