@@ -11,7 +11,7 @@ class Indexer_(object):
     def reset(self):
         raise NotImplementedError
 
-    def update(self, val=None, n=None, timed=None):
+    def update(self):
         """ 'val' and 'timed' are redundant here in order to have
         a common interface for all metrics.
         """

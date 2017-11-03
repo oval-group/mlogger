@@ -22,9 +22,13 @@ class TestTimeMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
+        self.time_idx = True
+        self.to_plot = False
         self.metric = TimeMetric_(name=self.name,
-                                  tag=self.tag)
-        self.start_time = self.metric.timer.start_time
+                                  tag=self.tag,
+                                  time_idx=self.time_idx,
+                                  to_plot=self.to_plot)
+        self.start_time = self.metric.index.start_time
 
     def test_init(self):
 
@@ -37,7 +41,7 @@ class TestTimeMetric(unittest.TestCase):
         value = time.time()
         self.metric.update(value)
         assert self.metric.get() == value - self.start_time
-        assert self.metric.timer.get() == value - self.start_time
+        assert self.metric.index.get() == value - self.start_time
 
         self.metric.update()
 
@@ -50,9 +54,13 @@ class TestSimpleMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
+        self.time_idx = True
+        self.to_plot = False
         self.metric = SimpleMetric_(name=self.name,
-                                    tag=self.tag)
-        self.start_time = self.metric.timer.start_time
+                                    tag=self.tag,
+                                    time_idx=self.time_idx,
+                                    to_plot=self.to_plot)
+        self.start_time = self.metric.index.start_time
 
     def test_init(self):
 
@@ -64,10 +72,11 @@ class TestSimpleMetric(unittest.TestCase):
 
         value = np.random.randn()
         timed = np.random.randn()
-        self.metric.update(value, timed=(self.start_time + timed))
+        self.metric.update(value)
+        self.metric.index.update(timed=(self.start_time + timed))
 
         assert np.isclose(self.metric.get(), value)
-        assert np.isclose(self.metric.timer.get(), timed)
+        assert np.isclose(self.metric.index.get(), timed)
 
 
 class TestBestMetric(unittest.TestCase):
@@ -76,14 +85,16 @@ class TestBestMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
+        self.time_idx = True
+        self.to_plot = False
         self.metric_min = BestMetric_(name=self.name,
                                       tag=self.tag,
                                       mode="min")
         self.metric_max = BestMetric_(name=self.name,
                                       tag=self.tag,
                                       mode="max")
-        self.start_time_min = self.metric_min.timer.start_time
-        self.start_time_max = self.metric_max.timer.start_time
+        self.start_time_min = self.metric_min.index.start_time
+        self.start_time_max = self.metric_max.index.start_time
 
     def test_init(self):
 
@@ -107,32 +118,32 @@ class TestBestMetric(unittest.TestCase):
         self.metric_min.update(value,
                                timed=(self.start_time_min + timed))
         assert np.isclose(self.metric_min.get(), value)
-        assert np.isclose(self.metric_min.timer.get(), timed)
+        assert np.isclose(self.metric_min.index.get(), timed)
 
         self.metric_min.update(value_greater,
                                timed=(self.start_time_min + timed_greater))
         assert np.isclose(self.metric_min.get(), value)
-        assert np.isclose(self.metric_min.timer.get(), timed_greater)
+        assert np.isclose(self.metric_min.index.get(), timed_greater)
 
         self.metric_min.update(value_lower,
                                timed=(self.start_time_min + timed_lower))
         assert np.isclose(self.metric_min.get(), value_lower)
-        assert np.isclose(self.metric_min.timer.get(), timed_lower)
+        assert np.isclose(self.metric_min.index.get(), timed_lower)
 
         self.metric_max.update(value,
                                timed=(self.start_time_max + timed))
         assert np.isclose(self.metric_max.get(), value)
-        assert np.isclose(self.metric_max.timer.get(), timed)
+        assert np.isclose(self.metric_max.index.get(), timed)
 
         self.metric_max.update(value_lower,
                                timed=(self.start_time_max + timed_lower))
         assert np.isclose(self.metric_max.get(), value)
-        assert np.isclose(self.metric_max.timer.get(), timed_lower)
+        assert np.isclose(self.metric_max.index.get(), timed_lower)
 
         self.metric_max.update(value_greater,
                                timed=(self.start_time_max + timed_greater))
         assert np.isclose(self.metric_max.get(), value_greater)
-        assert np.isclose(self.metric_max.timer.get(), timed_greater)
+        assert np.isclose(self.metric_max.index.get(), timed_greater)
 
 
 class TestAvgMetric(unittest.TestCase):
@@ -141,8 +152,12 @@ class TestAvgMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
+        self.time_idx = True
+        self.to_plot = False
         self.metric = AvgMetric_(name=self.name,
-                                 tag=self.tag)
+                                 tag=self.tag,
+                                 time_idx=self.time_idx,
+                                 to_plot=self.to_plot)
 
     def test_init(self):
 
@@ -171,8 +186,12 @@ class TestSumMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
+        self.time_idx = True
+        self.to_plot = False
         self.metric = SumMetric_(name=self.name,
-                                 tag=self.tag)
+                                 tag=self.tag,
+                                 time_idx=self.time_idx,
+                                 to_plot=self.to_plot)
 
     def test_init(self):
 
@@ -201,11 +220,17 @@ class TestParentWrapper(unittest.TestCase):
         self.tag = "my_tag"
 
         self.child1 = TimeMetric_(name="time",
-                                  tag=self.tag)
+                                  tag=self.tag,
+                                  time_idx=self.time_idx,
+                                  to_plot=self.to_plot)
         self.child2 = AvgMetric_(name="avg",
-                                 tag=self.tag)
+                                 tag=self.tag,
+                                 time_idx=self.time_idx,
+                                 to_plot=self.to_plot)
         self.child3 = SumMetric_(name="sum",
-                                 tag=self.tag)
+                                 tag=self.tag,
+                                 time_idx=self.time_idx,
+                                 to_plot=self.to_plot)
 
         self.children = (self.child1, self.child2, self.child3)
 
@@ -234,7 +259,7 @@ class TestParentWrapper(unittest.TestCase):
         res_dict = self.metric.get()
 
         np.testing.assert_allclose(res_dict['time'],
-                                   value_time - self.child1.timer.start_time)
+                                   value_time - self.child1.index.start_time)
         np.testing.assert_allclose(res_dict['avg'], value_avg)
         np.testing.assert_allclose(res_dict['sum'], n * value_sum)
 
@@ -277,7 +302,7 @@ class TestExperiment(unittest.TestCase):
         assert list(xp.logged['child1_my_tag'].values()) == [0.1]
         assert list(xp.logged['child2_my_tag'].values()) == [0.5]
         assert list(xp.logged['timer_my_tag'].values()) == \
-            [1. - timer.timer.start_time]
+            [1. - timer.index.start_time]
 
     def test_log_metric(self):
 
@@ -295,7 +320,7 @@ class TestExperiment(unittest.TestCase):
         assert list(xp.logged['child1_my_tag'].values()) == [0.1]
         assert list(xp.logged['child2_my_tag'].values()) == [0.5]
         assert list(xp.logged['timer_my_tag'].values()) == \
-            [1. - timer.timer.start_time]
+            [1. - timer.index.start_time]
 
     def test_get_metric(self):
 
@@ -337,7 +362,7 @@ class TestExperiment(unittest.TestCase):
         assert list(my_dict['logged']['child1_my_tag'].values()) == [0.1]
         assert list(my_dict['logged']['child2_my_tag'].values()) == [0.5]
         assert list(my_dict['logged']['timer_my_tag'].values()) == \
-            [1. - timer.timer.start_time]
+            [1. - timer.index.start_time]
 
         os.remove('tmp.pkl')
 
@@ -367,6 +392,6 @@ class TestExperiment(unittest.TestCase):
         assert list(my_dict['logged']['child1_my_tag'].values()) == [0.1]
         assert list(my_dict['logged']['child2_my_tag'].values()) == [0.5]
         assert list(my_dict['logged']['timer_my_tag'].values()) == \
-            [1. - timer.timer.start_time]
+            [1. - timer.index.start_time]
 
         os.remove('tmp.json')

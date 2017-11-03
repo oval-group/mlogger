@@ -7,7 +7,7 @@ from .utils import to_float
 
 
 class BaseMetric_(object):
-    def __init__(self, name, tag, time_idx):
+    def __init__(self, name, tag, time_idx, to_plot):
         """ Basic metric
         Includes a timer.
         """
@@ -18,6 +18,7 @@ class BaseMetric_(object):
         else:
             self.index = ValueIndexer_()
         self.time_idx = time_idx
+        self.to_plot = to_plot
         self.reset_hooks()
 
     def reset_hooks(self):
@@ -34,7 +35,7 @@ class BaseMetric_(object):
         raise NotImplementedError("reset should be re-implemented "
                                   "for each metric")
 
-    def update(self, val, n=None, idx=None):
+    def update(self, val, n=None):
         raise NotImplementedError("update should be re-implemented "
                                   "for each metric")
 
@@ -52,19 +53,18 @@ class BaseMetric_(object):
 
 
 class SimpleMetric_(BaseMetric_):
-    def __init__(self, name, tag, time_idx=True):
+    def __init__(self, name, tag, time_idx, to_plot):
         """ Stores a value and elapsed time
         since last update and last reset
         """
-        super(SimpleMetric_, self).__init__(name, tag, time_idx)
+        super(SimpleMetric_, self).__init__(name, tag, time_idx, to_plot)
         self.reset()
 
     def reset(self):
         self.val = 0.
 
-    def update(self, val, n=None, idx=None):
+    def update(self, val, n=None):
         self.val = to_float(val)
-        self.index.update(idx)
         self.hook()
 
     def get(self):
@@ -72,18 +72,17 @@ class SimpleMetric_(BaseMetric_):
 
 
 class TimeMetric_(BaseMetric_):
-    def __init__(self, name, tag):
+    def __init__(self, name, tag, to_plot):
         """ Stores elapsed time since last update and last reset
         """
-        super(TimeMetric_, self).__init__(name, tag, time_idx=True)
+        super(TimeMetric_, self).__init__(name, tag, time_idx=False)
         self.timer = TimeIndexer_()
 
     def reset(self):
         self.timer.reset()
 
-    def update(self, val=None, n=None, idx=None):
+    def update(self, val=None, n=None):
         self.timer.update(val)
-        self.index.update(idx)
         self.hook()
 
     def get(self):
@@ -91,21 +90,20 @@ class TimeMetric_(BaseMetric_):
 
 
 class BestMetric_(BaseMetric_):
-    def __init__(self, name, tag, mode='max', time_idx=True):
+    def __init__(self, name, tag, time_idx, to_plot, mode='max'):
         assert mode in ('min', 'max')
-        super(BestMetric_, self).__init__(name, tag, time_idx)
+        super(BestMetric_, self).__init__(name, tag, time_idx, to_plot)
         self.mode = 1 if mode == 'max' else -1
         self.reset()
 
     def reset(self):
         self.val = -self.mode * np.inf
 
-    def update(self, val, n=None, idx=None):
+    def update(self, val, n=None):
         val = to_float(val)
         if self.mode * val > self.mode * self.val:
             self.val = val
             self.hook()
-        self.index.update(idx)
 
     def get(self):
         return self.val
@@ -116,8 +114,8 @@ class Accumulator_(BaseMetric_):
     Accumulator.
     Credits to the authors of pytorch/tnt for this.
     """
-    def __init__(self, name, tag, time_idx=True):
-        super(Accumulator_, self).__init__(name, tag, time_idx)
+    def __init__(self, name, tag, time_idx, to_plot):
+        super(Accumulator_, self).__init__(name, tag, time_idx, to_plot)
         self.reset()
 
     def reset(self):
@@ -128,10 +126,9 @@ class Accumulator_(BaseMetric_):
     def set_const(self, const):
         self.const = to_float(const)
 
-    def update(self, val, n=1, idx=None):
+    def update(self, val, n=1):
         self.acc += to_float(val) * n
         self.count += n
-        self.index.update(idx)
         self.hook()
 
     def get(self):
@@ -139,31 +136,31 @@ class Accumulator_(BaseMetric_):
 
 
 class AvgMetric_(Accumulator_):
-    def __init__(self, name, tag, time_idx=True):
-        super(AvgMetric_, self).__init__(name, tag, time_idx)
+    def __init__(self, name, tag, time_idx, to_plot):
+        super(AvgMetric_, self).__init__(name, tag, time_idx, to_plot)
 
     def get(self):
         return self.const + self.acc * 1. / self.count
 
 
 class SumMetric_(Accumulator_):
-    def __init__(self, name, tag, time_idx=True):
-        super(SumMetric_, self).__init__(name, tag, time_idx)
+    def __init__(self, name, tag, time_idx, to_plot):
+        super(SumMetric_, self).__init__(name, tag, time_idx, to_plot)
 
     def get(self):
         return self.const + self.acc
 
 
 class ParentWrapper_(BaseMetric_):
-    def __init__(self, name, tag, children, time_idx=True):
-        super(ParentWrapper_, self).__init__(name, tag, time_idx)
+    def __init__(self, name, tag, children):
+        super(ParentWrapper_, self).__init__(name, tag, False, False)
         self.children = dict()
         for child in children:
             self.children[child.name] = child
 
-    def update(self, n=1, idx=None, **kwargs):
+    def update(self, n=1, **kwargs):
         for (key, value) in kwargs.items():
-            self.children[key].update(value, n, idx)
+            self.children[key].update(value, n)
 
     def reset(self):
         for child in self.children.values():
@@ -177,10 +174,10 @@ class ParentWrapper_(BaseMetric_):
 
 
 class DynamicMetric_(BaseMetric_):
-    def __init__(self, name, tag, fun=None, time_idx=True):
+    def __init__(self, name, tag, time_idx, to_plot, fun=None):
         """
         """
-        super(DynamicMetric_, self).__init__(name, tag, time_idx)
+        super(DynamicMetric_, self).__init__(name, tag, time_idx, to_plot)
         self.reset()
         if fun is not None:
             self.set_fun(fun)
@@ -189,9 +186,8 @@ class DynamicMetric_(BaseMetric_):
         self.fun = lambda: None
         self.val = None
 
-    def update(self, idx=None):
+    def update(self):
         self.val = self.fun()
-        self.index.update(idx)
         self.hook()
 
     def set_fun(self, fun):

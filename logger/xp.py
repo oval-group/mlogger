@@ -6,7 +6,7 @@ import sys
 from builtins import dict
 from collections import defaultdict, OrderedDict
 
-from .plot import Plotter
+from .plotter import Plotter
 from .metrics import TimeMetric_, AvgMetric_, SumMetric_, ParentWrapper_,\
     SimpleMetric_, BestMetric_, DynamicMetric_
 
@@ -20,7 +20,8 @@ else:
 class Experiment(object):
 
     def __init__(self, name, log_git_hash=True,
-                 use_visdom=False, visdom_opts=None):
+                 use_visdom=False, visdom_opts=None,
+                 time_indexing=True):
         """ Create an experiment with the following parameters:
         - log_git_hash (bool): retrieve current commit hash to log code status
         - use_visdom (bool): monitor metrics logged on visdom
@@ -39,35 +40,39 @@ class Experiment(object):
 
         self.config = dict()
         self.use_visdom = use_visdom
+        self.time_indexing = time_indexing
 
         if self.use_visdom:
-            self.plotter = Plotter(visdom_opts)
+            self.plotter = Plotter(self, visdom_opts)
 
         if log_git_hash:
             self.log_git_hash()
 
-    def NewMetric_(self, name, tag, Metric_, on_visdom, **kwargs):
-        metric = Metric_(name, tag, **kwargs)
-        self.register_metric(metric, on_visdom)
+    def NewMetric_(self, name, tag, Metric_, time_idx, to_plot, **kwargs):
+        if time_idx is None:
+            time_idx = self.time_indexing
+        metric = Metric_(name, tag,
+                         time_idx=time_idx, to_plot=to_plot, **kwargs)
+        self.register_metric(metric)
         return metric
 
-    def AvgMetric(self, name, tag="default", on_visdom=None):
-        return self.NewMetric_(name, tag, AvgMetric_, on_visdom)
+    def AvgMetric(self, name, tag="default", time_idx=None, to_plot=True):
+        return self.NewMetric_(name, tag, AvgMetric_, time_idx, to_plot)
 
-    def SimpleMetric(self, name, tag="default", on_visdom=None):
-        return self.NewMetric_(name, tag, SimpleMetric_, on_visdom)
+    def SimpleMetric(self, name, tag="default", time_idx=None, to_plot=True):
+        return self.NewMetric_(name, tag, SimpleMetric_, time_idx, to_plot)
 
-    def TimeMetric(self, name, tag="default", on_visdom=None):
-        return self.NewMetric_(name, tag, TimeMetric_, on_visdom)
+    def TimeMetric(self, name, tag="default", to_plot=True):
+        return self.NewMetric_(name, tag, TimeMetric_, False, to_plot)
 
-    def SumMetric(self, name, tag="default", on_visdom=None):
-        return self.NewMetric_(name, tag, SumMetric_, on_visdom)
+    def SumMetric(self, name, tag="default", time_idx=None, to_plot=True):
+        return self.NewMetric_(name, tag, SumMetric_, time_idx, to_plot)
 
-    def BestMetric(self, name, tag="default", mode="max", on_visdom=None):
-        return self.NewMetric_(name, tag, BestMetric_, on_visdom, mode=mode)
+    def BestMetric(self, name, tag="default", mode="max", time_idx=None, to_plot=True):
+        return self.NewMetric_(name, tag, BestMetric_, time_idx, to_plot, mode=mode)
 
-    def DynamicMetric(self, name, tag="default", fun=None, on_visdom=None):
-        return self.NewMetric_(name, tag, DynamicMetric_, on_visdom, fun=fun)
+    def DynamicMetric(self, name, tag="default", fun=None, time_idx=None, to_plot=True):
+        return self.NewMetric_(name, tag, DynamicMetric_, time_idx, to_plot, fun=fun)
 
     def ParentWrapper(self, name, tag="default", children=()):
 
@@ -82,11 +87,14 @@ class Experiment(object):
             # register child again
             self.register_metric(child)
 
-        return self.NewMetric_(name, tag, ParentWrapper_, children=children)
+        wrapper = ParentWrapper_(name, tag, children=children)
+        self.register_metric(wrapper)
+        return wrapper
 
-    def register_metric(self, metric, on_visdom):
+    def register_metric(self, metric):
 
         name_id = metric.name_id()
+        Name_Id = name_id.title()
         assert name_id not in self.registered, \
             "metric with id {} already exists".format(name_id)
 
@@ -94,20 +102,24 @@ class Experiment(object):
         self.metrics[metric.tag][metric.name] = metric
 
         # set attribute in title format for metric
-        setattr(self, name_id.title(), metric)
+        setattr(self, Name_Id, metric)
         # set property in lower format for dynamic value of metric
-        setattr(Experiment, name_id.lower(),
+        setattr(Experiment, name_id,
                 property(lambda x: metric.get()))
 
-        setattr(metric, 'log', lambda: self.log_metric(metric))
+        setattr(metric, 'log',
+                lambda idx=None: self.log_metric(metric, idx))
+        setattr(metric, 'log_and_reset',
+                lambda idx=None: self.log_and_reset_metric(metric, idx))
 
     def remove_metric(self, metric):
         name_id = metric.name_id()
+        Name_Id = name_id.title()
 
         self.metrics[metric.tag].pop(metric.name)
         self.registered.remove(name_id)
-        delattr(self, name_id.title())
-        delattr(Experiment, name_id.lower())
+        delattr(self, Name_Id)
+        delattr(Experiment, name_id)
 
     def log_git_hash(self):
 
@@ -128,27 +140,32 @@ class Experiment(object):
         if to_visdom and self.use_visdom:
             self.plotter.plot_config(config_dict)
 
-    def log_with_tag(self, tag):
+    def log_with_tag(self, tag, idx=None):
 
         # log all metrics with given tag except Parents
         # (to avoid logging twice the information)
         for metric in self.metrics[tag].values():
             if isinstance(metric, ParentWrapper_):
                 continue
-            self.log_metric(metric)
+            self.log_metric(metric, idx)
 
-    def log_metric(self, metric):
+    def log_metric(self, metric, idx=None):
 
         # log only child metrics
         if isinstance(metric, ParentWrapper_):
             for child in metric.children.values():
-                self.log_metric(child)
+                self.log_metric(child, idx)
             return
 
-        self.logged[metric.name_id()][metric.timer.get()] = metric.get()
+        metric.index.update(idx)
+        self.logged[metric.name_id()][metric.index.get()] = metric.get()
 
-        if self.use_visdom:
+        if self.use_visdom and metric.to_plot:
             self.plotter.plot_metric(metric)
+
+    def log_and_reset_metric(self, metric, idx=None):
+        self.log_metric(metric, idx)
+        metric.reset()
 
     def get_metric(self, name, tag="default"):
 
@@ -168,34 +185,29 @@ class Experiment(object):
         return var_dict
 
     def to_pickle(self, filename):
-
         var_dict = self.get_var_dict()
         with open(filename, 'wb') as f:
             pickle.dump(var_dict, f)
 
     def to_json(self, filename):
-
         var_dict = self.get_var_dict()
         with open(filename, 'w') as f:
             json.dump(var_dict, f)
 
     def from_pickle(self, filename):
-        assert filename.endswith(".pickle")
-
         with open(filename, 'r') as f:
             my_dict = pickle.load(f)
             my_dict = _dict_process(my_dict)
         self.__dict__.update(my_dict)
 
     def from_json(self, filename):
-        assert filename.endswith(".json")
         with open(filename, 'r') as f:
             my_dict = json.load(f, object_pairs_hook=OrderedDict)
             my_dict = _dict_process(my_dict)
         self.__dict__.update(my_dict)
 
     def to_visdom(self, visdom_opts=None):
-        self.plotter = Plotter(visdom_opts)
+        self.plotter = Plotter(self, visdom_opts)
         self.plotter.plot_xp(self)
 
 
