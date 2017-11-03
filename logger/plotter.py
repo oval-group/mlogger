@@ -40,11 +40,11 @@ class Plotter(object):
                                  win=self.windows[name],
                                  append=True)
 
-    def plot_xp(self, xp, visdom_opts):
-        self.viz = visdom.Visdom(**visdom_opts)
+    def plot_xp(self, xp):
 
         if 'git_diff' in xp.config.keys():
-            config = xp.config.copy().pop('git_diff')
+            config = xp.config.copy()
+            config.pop('git_diff')
         self.plot_config(config)
 
         for tag in sorted(xp.logged.keys()):
@@ -52,10 +52,10 @@ class Plotter(object):
                 self.plot_logged(xp.logged, tag, name)
 
     def plot_logged(self, logged, tag, name):
-        xy = self.logged[tag][name]
+        xy = logged[tag][name]
         x = np.array(xy.keys()).astype(np.float)
         y = np.array(xy.values())
-        time_idx = not np.isclose(x, x.astype(np.int))
+        time_idx = not np.isclose(x, x.astype(np.int)).all()
         self._plot_xy(name, tag, x, y, time_idx)
 
     def plot_metric(self, metric):

@@ -35,7 +35,7 @@ def oracle(data, target):
 
 n_epochs = 10
 use_visdom = True
-time_indexing = True
+time_indexing = False
 # some hyperparameters we wish to save for this experiment
 hyperparameters = dict(regularization=1,
                        n_epochs=n_epochs)
@@ -84,3 +84,11 @@ for epoch in range(n_epochs):
 xp.to_pickle("my_pickle_log.pkl")
 # save to json file
 xp.to_json("my_json_log.json")
+
+xp2 = logger.Experiment("")
+xp2.from_json("my_json_log.json")
+xp2.to_visdom()
+
+xp3 = logger.Experiment("")
+xp3.from_pickle("my_pickle_log.pkl")
+xp3.to_visdom()
