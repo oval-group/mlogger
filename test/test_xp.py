@@ -70,6 +70,19 @@ class TestExperiment(unittest.TestCase):
         assert list(xp.logged['timer_my_tag'].values()) == \
             [1. - timer._timer.start]
 
+        assert xp.child1_my_tag == 0.1
+        assert xp.child2_my_tag == 0.5
+
+        xp.Child1_My_Tag.update(0.3)
+        xp.Child2_My_Tag.update(0.5)
+        xp.Parent_My_Tag.log()
+
+        assert xp.child1_my_tag == 0.2
+        assert xp.child2_my_tag == 1.0
+
+        assert list(xp.logged['child1_my_tag'].values()) == [0.1, 0.2]
+        assert list(xp.logged['child2_my_tag'].values()) == [0.5, 1.0]
+
     def test_get_metric(self):
 
         xp = Experiment("my_name")
@@ -83,6 +96,9 @@ class TestExperiment(unittest.TestCase):
         assert metric_not_tagged_2 is metric_not_tagged
 
         assert metric_tagged_1 is metric_tagged
+
+        assert xp.My_Metric is metric_not_tagged
+        assert xp.My_Metric_My_Tag is metric_tagged
 
     def test_to_pickle(self):
 
