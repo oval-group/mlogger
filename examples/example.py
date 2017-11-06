@@ -23,6 +23,10 @@ def validation_data():
     return random_data_generator()
 
 
+def test_data():
+    return random_data_generator()
+
+
 def oracle(data, target):
     """ fake metric data generator
     """
@@ -48,37 +52,47 @@ xp = logger.Experiment("xp_name", use_visdom=use_visdom,
 # log the hyperparameters of the experiment
 xp.log_config(hyperparameters)
 # create parent metric for training metrics (easier interface)
-train_metrics = xp.ParentWrapper(tag='train', name='parent',
-                                 children=(xp.AvgMetric(name='loss'),
-                                           xp.AvgMetric(name='acc1'),
-                                           xp.AvgMetric(name='acck')))
+xp.ParentWrapper(tag='train', name='parent',
+                 children=(xp.AvgMetric(name='loss'),
+                           xp.AvgMetric(name='acc1'),
+                           xp.AvgMetric(name='acck')))
 # same for validation metrics (note all children inherit tag from parent)
-val_metrics = xp.ParentWrapper(tag='val', name='parent',
-                               children=(xp.AvgMetric(name='loss'),
-                                         xp.AvgMetric(name='acc1'),
-                                         xp.AvgMetric(name='acck')))
+xp.ParentWrapper(tag='val', name='parent',
+                 children=(xp.AvgMetric(name='loss'),
+                           xp.AvgMetric(name='acc1'),
+                           xp.AvgMetric(name='acck')))
+xp.AvgMetric(tag="test", name="acc1")
+xp.AvgMetric(tag="test", name="acck")
 
 for epoch in range(n_epochs):
-    # reset metrics
-    train_metrics.reset()
     # accumulate metrics over epoch
     for (x, y) in training_data():
         loss, acc1, acck = oracle(x, y)
-        train_metrics.update(loss=loss, acc1=acc1,
-                             acck=acck, n=len(x))
+        xp.Parent_Train.update(loss=loss, acc1=acc1,
+                               acck=acck, n=len(x))
+    xp.Parent_Train.log_and_reset()
 
-    train_metrics.log_and_reset()
-
-    # Method 1 for logging: log all metrics tagged with 'train'
-    # xp.log_with_tag('train')
-    val_metrics.reset()
     for (x, y) in validation_data():
         loss, acc1, acck = oracle(x, y)
-        val_metrics.update(loss=loss, acc1=acc1,
-                           acck=acck, n=len(x))
-    # Method 2 for logging: log Parent wrapper
-    # (automatically logs all children)
-    xp.log_metric(val_metrics)
+        xp.Parent_Val.update(loss=loss, acc1=acc1,
+                             acck=acck, n=len(x))
+    xp.Parent_Val.log()
+    xp.Parent_Val.reset()
+
+for (x, y) in test_data():
+    _, acc1, acck = oracle(x, y)
+    # update metrics individually
+    xp.Acc1_Test.update(acc1, n=len(x))
+    xp.Acck_Test.update(acck, n=len(x))
+
+# access to current values of metric with property of xp in lower case:
+# xp.acc1_test is equivalent to xp.Acc1_Test.get()
+acc1_test = xp.acc1_test
+acck_test = xp.acck_test
+print("Performance On Test Data:")
+print("-" * 50)
+print("Prec@1: \t {0:.2f}%".format(acc1_test))
+print("Prec@k: \t {0:.2f}%".format(acck_test))
 
 # save to pickle file
 xp.to_pickle("my_pickle_log.pkl")

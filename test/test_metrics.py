@@ -75,7 +75,7 @@ class TestBestMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
-        self.time_idx = True
+        self.time_idx = False
         self.to_plot = False
         self.metric_min = BestMetric_(name=self.name,
                                       tag=self.tag,
@@ -105,9 +105,6 @@ class TestBestMetric(unittest.TestCase):
         value = np.random.randn()
         value_greater = value + 1
         value_lower = value - 1
-        timed = np.random.randn()
-        timed_greater = np.random.randn()
-        timed_lower = np.random.randn()
 
         self.metric_min.update(value)
         assert np.isclose(self.metric_min.get(), value)
@@ -134,7 +131,7 @@ class TestAvgMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
-        self.time_idx = True
+        self.time_idx = False
         self.to_plot = False
         self.metric = AvgMetric_(name=self.name,
                                  tag=self.tag,
@@ -168,7 +165,7 @@ class TestSumMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
-        self.time_idx = True
+        self.time_idx = False
         self.to_plot = False
         self.metric = SumMetric_(name=self.name,
                                  tag=self.tag,

@@ -10,7 +10,7 @@ To install the package, run:
 
 ## Usage
 
-There are two types of objects in this package: `Experiment` and `Metric`. An `Experiment` instance serves as an interface, and all `Metric` objects are rattached to it (see the example below).
+There are two types of objects in this package: `Experiment` and `Metric`. An `Experiment` instance serves as an interface, and all `Metric` objects are reattached to it (see the example below).
 
 Each metric has an `update` method that updates its internal state (e.g. current elapsed time for a `TimerMetric`, cumulated average for an `AvgMetric`), and a `reset` method to re-initialize it. The result of each metric can be fetched by the `Experiment` through the `log` methods. Note that calling `log` allows to store the result of a metric in the `Experiment` but does *not* reset the metric.
 
@@ -29,7 +29,7 @@ The value given in the `update` method of a metric must be one of the following:
 It is then converted to a python `float` number.
 
 ## Example
-An toy example can be found at `examples/example.py`:
+A toy example can be found at `examples/example.py`:
 
 ```python
 import logger
