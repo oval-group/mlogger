@@ -1,19 +1,9 @@
 import unittest
-import git
 import time
 import numpy as np
-import os
-import json
-import sys
 
-from logger.xp import Experiment
 from logger.metrics import TimeMetric_, AvgMetric_, SumMetric_, SimpleMetric_, \
     ParentWrapper_, BestMetric_
-
-if sys.version_info[0] == 2:
-    import cPickle as pickle
-else:
-    import pickle
 
 
 class TestTimeMetric(unittest.TestCase):
@@ -28,7 +18,7 @@ class TestTimeMetric(unittest.TestCase):
                                   tag=self.tag,
                                   time_idx=self.time_idx,
                                   to_plot=self.to_plot)
-        self.start_time = self.metric.index.start_time
+        self.start = self.metric._timer.start
 
     def test_init(self):
 
@@ -40,12 +30,12 @@ class TestTimeMetric(unittest.TestCase):
 
         value = time.time()
         self.metric.update(value)
-        assert self.metric.get() == value - self.start_time
-        assert self.metric.index.get() == value - self.start_time
+        assert self.metric.get() == value - self.start
+        assert self.metric._timer.get() == value - self.start
 
         self.metric.update()
 
-        assert self.metric.get() > value - self.start_time
+        assert self.metric.get() > value - self.start
 
 
 class TestSimpleMetric(unittest.TestCase):
@@ -60,7 +50,7 @@ class TestSimpleMetric(unittest.TestCase):
                                     tag=self.tag,
                                     time_idx=self.time_idx,
                                     to_plot=self.to_plot)
-        self.start_time = self.metric.index.start_time
+        self.start = self.metric.index.start
 
     def test_init(self):
 
@@ -73,7 +63,7 @@ class TestSimpleMetric(unittest.TestCase):
         value = np.random.randn()
         timed = np.random.randn()
         self.metric.update(value)
-        self.metric.index.update(timed=(self.start_time + timed))
+        self.metric.index.update(self.start + timed)
 
         assert np.isclose(self.metric.get(), value)
         assert np.isclose(self.metric.index.get(), timed)
@@ -89,12 +79,16 @@ class TestBestMetric(unittest.TestCase):
         self.to_plot = False
         self.metric_min = BestMetric_(name=self.name,
                                       tag=self.tag,
+                                      time_idx=self.time_idx,
+                                      to_plot=self.to_plot,
                                       mode="min")
         self.metric_max = BestMetric_(name=self.name,
                                       tag=self.tag,
+                                      time_idx=self.time_idx,
+                                      to_plot=self.to_plot,
                                       mode="max")
-        self.start_time_min = self.metric_min.index.start_time
-        self.start_time_max = self.metric_max.index.start_time
+        self.start_min = self.metric_min.index.start
+        self.start_max = self.metric_max.index.start
 
     def test_init(self):
 
@@ -115,35 +109,23 @@ class TestBestMetric(unittest.TestCase):
         timed_greater = np.random.randn()
         timed_lower = np.random.randn()
 
-        self.metric_min.update(value,
-                               timed=(self.start_time_min + timed))
+        self.metric_min.update(value)
         assert np.isclose(self.metric_min.get(), value)
-        assert np.isclose(self.metric_min.index.get(), timed)
 
-        self.metric_min.update(value_greater,
-                               timed=(self.start_time_min + timed_greater))
+        self.metric_min.update(value_greater)
         assert np.isclose(self.metric_min.get(), value)
-        assert np.isclose(self.metric_min.index.get(), timed_greater)
 
-        self.metric_min.update(value_lower,
-                               timed=(self.start_time_min + timed_lower))
+        self.metric_min.update(value_lower)
         assert np.isclose(self.metric_min.get(), value_lower)
-        assert np.isclose(self.metric_min.index.get(), timed_lower)
 
-        self.metric_max.update(value,
-                               timed=(self.start_time_max + timed))
+        self.metric_max.update(value)
         assert np.isclose(self.metric_max.get(), value)
-        assert np.isclose(self.metric_max.index.get(), timed)
 
-        self.metric_max.update(value_lower,
-                               timed=(self.start_time_max + timed_lower))
+        self.metric_max.update(value_lower)
         assert np.isclose(self.metric_max.get(), value)
-        assert np.isclose(self.metric_max.index.get(), timed_lower)
 
-        self.metric_max.update(value_greater,
-                               timed=(self.start_time_max + timed_greater))
+        self.metric_max.update(value_greater)
         assert np.isclose(self.metric_max.get(), value_greater)
-        assert np.isclose(self.metric_max.index.get(), timed_greater)
 
 
 class TestAvgMetric(unittest.TestCase):
@@ -218,6 +200,8 @@ class TestParentWrapper(unittest.TestCase):
     def setUp(self):
 
         self.tag = "my_tag"
+        self.time_idx = False
+        self.to_plot = False
 
         self.child1 = TimeMetric_(name="time",
                                   tag=self.tag,
@@ -259,139 +243,6 @@ class TestParentWrapper(unittest.TestCase):
         res_dict = self.metric.get()
 
         np.testing.assert_allclose(res_dict['time'],
-                                   value_time - self.child1.index.start_time)
+                                   value_time - self.child1._timer.start)
         np.testing.assert_allclose(res_dict['avg'], value_avg)
         np.testing.assert_allclose(res_dict['sum'], n * value_sum)
-
-
-class TestExperiment(unittest.TestCase):
-
-    def setUp(self):
-
-        self.name = "my_name"
-        self.config = {"param1": 1, "param2": (1., 2., 3.)}
-
-    def test_log_config(self):
-
-        xp = Experiment("my_name", log_git_hash=False)
-        xp.log_config(self.config)
-
-        assert list(xp.config.items()) == list(self.config.items())
-
-    def test_log_git_hash(self):
-
-        xp = Experiment("my_name")
-
-        repo = git.Repo(search_parent_directories=True)
-        commit = repo.head.object.hexsha
-
-        assert xp.config['git_hash'] == commit
-
-    def test_log_with_tag(self):
-
-        xp = Experiment("my_name")
-        metrics = xp.ParentWrapper(tag='my_tag', name='parent',
-                                   children=(xp.AvgMetric(name='child1'),
-                                             xp.SumMetric(name='child2')))
-        timer = xp.TimeMetric(tag='my_tag', name='timer')
-        metrics.update(child1=0.1, child2=0.5)
-        timer.update(1.)
-
-        xp.log_with_tag('my_tag')
-
-        assert list(xp.logged['child1_my_tag'].values()) == [0.1]
-        assert list(xp.logged['child2_my_tag'].values()) == [0.5]
-        assert list(xp.logged['timer_my_tag'].values()) == \
-            [1. - timer.index.start_time]
-
-    def test_log_metric(self):
-
-        xp = Experiment("my_name")
-        metrics = xp.ParentWrapper(tag='my_tag', name='parent',
-                                   children=(xp.AvgMetric(name='child1'),
-                                             xp.SumMetric(name='child2')))
-        timer = xp.TimeMetric(tag='my_tag', name='timer')
-        metrics.update(child1=0.1, child2=0.5)
-        timer.update(1.)
-
-        xp.log_metric(metrics)
-        xp.log_metric(timer)
-
-        assert list(xp.logged['child1_my_tag'].values()) == [0.1]
-        assert list(xp.logged['child2_my_tag'].values()) == [0.5]
-        assert list(xp.logged['timer_my_tag'].values()) == \
-            [1. - timer.index.start_time]
-
-    def test_get_metric(self):
-
-        xp = Experiment("my_name")
-        metric_not_tagged = xp.SumMetric(name='my_metric')
-        metric_not_tagged_1 = xp.get_metric(name='my_metric')
-        metric_not_tagged_2 = xp.get_metric(name='my_metric', tag='default')
-        metric_tagged = xp.SumMetric(tag='my_tag', name='my_metric')
-        metric_tagged_1 = xp.get_metric(tag='my_tag', name='my_metric')
-
-        assert metric_not_tagged_1 is metric_not_tagged
-        assert metric_not_tagged_2 is metric_not_tagged
-
-        assert metric_tagged_1 is metric_tagged
-
-    def test_to_pickle(self):
-
-        xp = Experiment("my_name")
-        metrics = xp.ParentWrapper(tag='my_tag', name='parent',
-                                   children=(xp.AvgMetric(name='child1'),
-                                             xp.SumMetric(name='child2')))
-        timer = xp.TimeMetric(tag='my_tag', name='timer')
-        metrics.update(child1=0.1, child2=0.5)
-        timer.update(1.)
-
-        xp.log_with_tag('my_tag')
-        xp.to_pickle('tmp.pkl')
-
-        with open('tmp.pkl', 'rb') as tmp:
-            my_dict = pickle.load(tmp)
-
-        # check basic attributes
-        assert my_dict['name'] == getattr(xp, 'name')
-        assert my_dict['date_and_time'] == getattr(xp, 'date_and_time')
-        assert list(my_dict['config'].values()) == \
-            list(getattr(xp, 'config').values())
-
-        # check log
-        assert list(my_dict['logged']['child1_my_tag'].values()) == [0.1]
-        assert list(my_dict['logged']['child2_my_tag'].values()) == [0.5]
-        assert list(my_dict['logged']['timer_my_tag'].values()) == \
-            [1. - timer.index.start_time]
-
-        os.remove('tmp.pkl')
-
-    def test_to_json(self):
-
-        xp = Experiment("my_name")
-        metrics = xp.ParentWrapper(tag='my_tag', name='parent',
-                                   children=(xp.AvgMetric(name='child1'),
-                                             xp.SumMetric(name='child2')))
-        timer = xp.TimeMetric(tag='my_tag', name='timer')
-        metrics.update(child1=0.1, child2=0.5)
-        timer.update(1.)
-
-        xp.log_with_tag('my_tag')
-        xp.to_json('tmp.json')
-
-        with open('tmp.json', 'r') as tmp:
-            my_dict = json.load(tmp)
-
-        # check basic attributes
-        assert my_dict['name'] == getattr(xp, 'name')
-        assert my_dict['date_and_time'] == getattr(xp, 'date_and_time')
-        assert list(my_dict['config'].values()) == \
-            list(getattr(xp, 'config').values())
-
-        # check log
-        assert list(my_dict['logged']['child1_my_tag'].values()) == [0.1]
-        assert list(my_dict['logged']['child2_my_tag'].values()) == [0.5]
-        assert list(my_dict['logged']['timer_my_tag'].values()) == \
-            [1. - timer.index.start_time]
-
-        os.remove('tmp.json')

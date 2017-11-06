@@ -72,21 +72,24 @@ class SimpleMetric_(BaseMetric_):
 
 
 class TimeMetric_(BaseMetric_):
-    def __init__(self, name, tag, to_plot):
+    def __init__(self, name, tag, to_plot, time_idx=False):
         """ Stores elapsed time since last update and last reset
+        Note: ignores time_idx argument - always indexed by value
         """
-        super(TimeMetric_, self).__init__(name, tag, time_idx=False)
-        self.timer = TimeIndexer_()
+        super(TimeMetric_, self).__init__(name, tag,
+                                          time_idx=False,
+                                          to_plot=to_plot)
+        self._timer = TimeIndexer_()
 
     def reset(self):
-        self.timer.reset()
+        self._timer.reset()
 
     def update(self, val=None, n=None):
-        self.timer.update(val)
+        self._timer.update(val)
         self.hook()
 
     def get(self):
-        return self.timer.get()
+        return self._timer.get()
 
 
 class BestMetric_(BaseMetric_):
