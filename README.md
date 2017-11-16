@@ -41,6 +41,7 @@ A metric is identified by a combination of name (required when creating the metr
 * `TimeMetric`: yields the time difference between the last update and the last reset
 * `AvgMetric`: yields the (possibly weighted) average of all updates since last reset
 * `SumMetric`: yields the (possibly weighted) sum of all updates since last reset
+* `BestMetric`: yields the best value given in update since last reset (maximal in "max" mode, minimal in "min" mode)
 * `DynamicMetric`: requires a function to obtain its value, yields value obtained by a function call at last update
 * `ParentWrapper`: wraps around children Metrics, whcih all inherit its tag, yields a dictionary with values of its children
 
