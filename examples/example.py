@@ -87,8 +87,8 @@ for (x, y) in test_data():
 
 # access to current values of metric with property of xp in lower case:
 # xp.acc1_test is equivalent to xp.Acc1_Test.get()
-acc1_test = xp.acc1_test
-acck_test = xp.acck_test
+acc1_test = xp.acc1_test()
+acck_test = xp.acck_test()
 print("Performance On Test Data:")
 print("-" * 50)
 print("Prec@1: \t {0:.2f}%".format(acc1_test))

@@ -101,11 +101,13 @@ class Experiment(object):
         self.registered.append(name_id)
         self.metrics[metric.tag][metric.name] = metric
 
+        assert not hasattr(self, Name_Id) or metric is getattr(self, Name_Id)
+        assert not hasattr(self, name_id), name_id
+
         # set attribute in title format for metric
         setattr(self, Name_Id, metric)
         # set property in lower format for dynamic value of metric
-        setattr(Experiment, name_id,
-                property(lambda x: metric.get()))
+        setattr(self, name_id, lambda: metric.get())
 
         setattr(metric, 'log',
                 lambda idx=None: self.log_metric(metric, idx))
@@ -119,7 +121,7 @@ class Experiment(object):
         self.metrics[metric.tag].pop(metric.name)
         self.registered.remove(name_id)
         delattr(self, Name_Id)
-        delattr(Experiment, name_id)
+        delattr(self, name_id)
 
     def log_git_hash(self):
 

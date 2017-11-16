@@ -26,30 +26,24 @@ xp.log_config(hp_dict)  # store hyper-parameters in experiment
 
 The main use case of this package is to use metrics to monitor various values during an experiment. We detail this below.
 
-### Initializing a Metric
-
-Metrics are instantiated through the experiment object:
-```python
-xp = logger.Experiment("my_xp_name")  # creating an experiment
-xp.SimpleMetric(name="score")  # creating a simple metric
-```
-
-A metric is identified by a combination of name (required when creating the metric) and tag (optional, set to "default" by default). A suggestion for machine learning is to use tags like "train", "val" and "test" to identify metrics on training, validation and testing data sets. We recommend to use strings in lower case without special characters for the names and tags.
-
 ### Types of Metrics
 * `SimpleMetric`: yields the value of the last update
 * `TimeMetric`: yields the time difference between the last update and the last reset
 * `AvgMetric`: yields the (possibly weighted) average of all updates since last reset
 * `SumMetric`: yields the (possibly weighted) sum of all updates since last reset
-* `BestMetric`: yields the best value given in update since last reset (maximal in "max" mode, minimal in "min" mode)
-* `DynamicMetric`: requires a function to obtain its value, yields value obtained by a function call at last update
-* `ParentWrapper`: wraps around children Metrics, whcih all inherit its tag, yields a dictionary with values of its children
+* `BestMetric`: yields the best value given in update since last reset (best: largest in "max" mode, smallest in "min" mode)
+* `DynamicMetric`: requires a function to obtain its value, yields value obtained by a call to the function at last update
+* `ParentWrapper`: wraps around children metrics, yields a dictionary with values of its children
 
-### Indexing a Metric
+### Initializing a Metric
 
-Every metric is indexed by either a `ValueIndex` or a `TimeIndex` (except `TimeMetric`, which is always indexed by a `ValueIndex`). This allows to have values for an x-axis when logging the information. The index is modified when the metric is logged (more on that below). By default, `TimeIndex` updates its value at the time of the log, and `ValueIndex` increments a counter by one.
+Metrics are instantiated through the `Experiment` object:
+```python
+xp = logger.Experiment("my_xp_name")  # creating an experiment
+xp.SimpleMetric(name="score")  # creating a simple metric
+```
 
-The default behavior is that all metrics are indexed by a `TimeIndex`. This can be changed to a default behavior of value indexing by setting `time_indexing=False` when creating the `Experiment`.
+A metric is identified by a combination of name (required when creating the metric) and tag (optional, set to "default" by default). For machine learning experiments, we suggest to use tags like "train", "val" and "test" to identify metrics on training, validation and testing data sets. We recommend to use strings in lower case without special characters for the names and tags.
 
 ### Accessing a Metric Object
 
@@ -66,7 +60,7 @@ xp.SimpleMetric(name="score", tag="cool")
 my_metric = xp.get_metric(name="score", tag="cool")
 ```
 
-* An attribute request to the `Experiment` object based with the formatting `{}_{}`.format(name, tag).title() of the metric:
+* An attribute request to the `Experiment` object based with the formatting `{}_{}.format(name, tag).title()`:
 ```python
 xp = logger.Experiment("my_xp_name")
 xp.SimpleMetric(name="score", tag="cool")
@@ -82,12 +76,13 @@ my_metric = xp.Score
 
 ### Updating & Getting the Value of a Metric
 
-The value of a metric is updated through the `update` method, and obtained by a call to the `get` method:
+The value of a metric is updated through the `update` method, and obtained by a call to the `get` method. The value can also be obtained by a call to the `Experiment` object on the method named as `{}_{}.format(name, tag).lower()`:
 ```python
 xp = logger.Experiment("my_xp_name")
 xp.SimpleMetric(name="score")
 xp.Score.update(10) # set the value of the metric to 10.
-xp.Score.get() # returns 10.
+xp.Score.get()  # returns 10.
+xp.score()  # returns 10.
 ```
 
 The value given in the `update` method of a metric must be one of the following:
@@ -107,7 +102,8 @@ xp.ParentWrapper(name="parent",
                            xp.SimpleMetric("child3"))
 xp.Parent.update(child1=3, child2=5) # set the value of the metric xp.Child1 to 3. and xp.Child2 to 5.
 xp.Parent.update(child3=9) # set the value of the metric xp.Child3 to 9.
-xp.Parent.get() # returns {'child1': 3., 'child2': 5., 'child3': 9.}
+xp.Parent.get()  # returns {'child1': 3., 'child2': 5., 'child3': 9.}
+xp.parent()  # returns {'child1': 3., 'child2': 5., 'child3': 9.}
 ```
 
 ### Logging a Metric
@@ -121,8 +117,15 @@ xp.Score.log() # log value of metric (preferred syntax)
 xp.log_metric(name="score") # equivalent syntax
 ```
 
-This logs the value of the metric in the attribute `logged` of `xp`. It also updates the `ValueIndexer` or the `TimeIndex` of the metric. If `xp` is connected to a plotting backend (e.g. `visdom`), this also sends the value of the metric to be displayed.
+This logs the value of the metric in the attribute `logged` of `xp`. It also updates the index of the metric (see next section). If `xp` is connected to a plotting backend (e.g. `visdom`), this also sends the value of the metric to be displayed.
 
+### Indexing a Metric
+
+Every metric is indexed by either a `ValueIndex` or a `TimeIndex`. This allows to have values for an x-axis when logging the information. The index is modified when the metric is logged (more on that below). By default, `TimeIndex` updates its value at the time of the log, and `ValueIndex` increments a counter by one.
+
+The default behavior is that all metrics are indexed by a `TimeIndex`<sup>1</sup>. This default behavior can be changed to value indexing, by setting `time_indexing=False` when creating the `Experiment`.
+
+<sup>1</sup>except for `TimeMetric`, which is always indexed by a `ValueIndex`.
 
 ### Resetting a Metric
 
