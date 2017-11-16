@@ -8,10 +8,114 @@ To install the package, run:
 * `pip install -r requirements.txt` (the only requirement are `GitPython` and `numpy`, `visdom` is optional but recommended for real-time visualization)
 * `python setup.py install`.
 
-## Usage
+## Example
+The following example shows the functionalities of the package (full example code in `examples/example.py`):
 
-There are two types of objects in this package: `Experiment` and `Metric`. An `Experiment` instance serves as an interface, and all `Metric` objects are reattached to it (details below).
+```python
+import logger
+import numpy as np
 
+from builtins import range
+
+
+#...
+# code to generate fake data
+#...
+
+
+# some hyper-parameters of the experiment
+lr = 0.01
+n_epochs = 10
+
+#----------------------------------------------------------
+# Prepare logging
+#----------------------------------------------------------
+
+# create Experiment
+xp = logger.Experiment("xp_name", use_visdom=True,
+                       visdom_opts={'server': 'http://localhost', 'port': 8097},
+                       time_indexing=False)
+# log the hyperparameters of the experiment
+xp.log_config({'lr': lr, 'n_epochs': n_epochs})
+# create parent metric for training metrics (easier interface)
+xp.ParentWrapper(tag='train', name='parent',
+                 children=(xp.AvgMetric(name='loss'),
+                           xp.AvgMetric(name='acc1'),
+                           xp.AvgMetric(name='acck')))
+# same for validation metrics (note all children inherit tag from parent)
+xp.ParentWrapper(tag='val', name='parent',
+                 children=(xp.AvgMetric(name='loss'),
+                           xp.AvgMetric(name='acc1'),
+                           xp.AvgMetric(name='acck')))
+best1 = xp.BestMetric(tag="val-best", name="acc1")
+bestk = xp.BestMetric(tag="val-best", name="acck")
+xp.AvgMetric(tag="test", name="acc1")
+xp.AvgMetric(tag="test", name="acck")
+
+#----------------------------------------------------------
+# Training
+#----------------------------------------------------------
+
+for epoch in range(n_epochs):
+    # train model
+    for (x, y) in training_data():
+        loss, acc1, acck = oracle(x, y)
+        # accumulate metrics (average over mini-batches)
+        xp.Parent_Train.update(loss=loss, acc1=acc1,
+                               acck=acck, n=len(x))
+    # log metrics (i.e. store in xp and send to visdom) and reset
+    xp.Parent_Train.log_and_reset()
+
+    for (x, y) in validation_data():
+        loss, acc1, acck = oracle(x, y)
+        xp.Parent_Val.update(loss=loss, acc1=acc1,
+                             acck=acck, n=len(x))
+    acc1_val = xp.acc1_val()  # current value of acc1 on val
+    acck_val = xp.acck_val()  # current value of acc1 on val
+    best1.update(acc1_val)  # update only if better than previous values
+    bestk.update(acck_val)  # update only if better than previous values
+    xp.Parent_Val.log_and_reset()
+    best1.log()
+    bestk.log()
+
+for (x, y) in test_data():
+    _, acc1, acck = oracle(x, y)
+    # update metrics individually
+    xp.Acc1_Test.update(acc1, n=len(x))
+    xp.Acck_Test.update(acck, n=len(x))
+xp.log_with_tag('test')
+
+print("=" * 50)
+print("Best Performance On Validation Data:")
+print("-" * 50)
+print("Prec@1: \t {0:.2f}%".format(best1.get()))
+print("Prec@k: \t {0:.2f}%".format(bestk.get()))
+print("=" * 50)
+print("Performance On Test Data:")
+print("-" * 50)
+print("Prec@1: \t {0:.2f}%".format(xp.acc1_test()))
+print("Prec@k: \t {0:.2f}%".format(xp.acck_test()))
+
+#----------------------------------------------------------
+# Save & load experiment
+#----------------------------------------------------------
+
+# save file
+xp.to_json("my_json_log.json")  # or xp.to_pickle("my_pickle_log.pkl")
+
+xp2 = logger.Experiment("")  # new Experiment instance
+xp2.from_json("my_json_log.json")  # or xp.from_pickle("my_pickle_log.pkl")
+xp2.to_visdom(visdom_opts={'server': 'http://localhost', 'port': 8097})  # plot again data on visdom
+
+```
+
+This generates (twice) the following plots on `visdom`:
+![alt text](examples/example.jpg)
+
+
+## Documentation
+
+There are two types of objects in this package: `Experiment` and `Metric`. An `Experiment` instance serves as an interface, and all `Metric` objects are attached to it (details below).
 
 ### Logging Hyper-Parameters
 
@@ -35,7 +139,7 @@ The main use case of this package is to use metrics to monitor various values du
 * `DynamicMetric`: requires a function to obtain its value, yields value obtained by a call to the function at last update
 * `ParentWrapper`: wraps around children metrics, yields a dictionary with values of its children
 
-### Initializing a Metric
+### Creating a Metric
 
 Metrics are instantiated through the `Experiment` object:
 ```python
@@ -114,7 +218,7 @@ xp = logger.Experiment("my_xp_name")
 xp.SimpleMetric(name="score")
 xp.Score.update(10) # set the value of the metric to 10
 xp.Score.log() # log value of metric (preferred syntax)
-xp.log_metric(name="score") # equivalent syntax
+xp.log_metric(name="score") # equivalent syntax (NB: logging twice creates two logged values)
 ```
 
 This logs the value of the metric in the attribute `logged` of `xp`. It also updates the index of the metric (see next section). If `xp` is connected to a plotting backend (e.g. `visdom`), this also sends the value of the metric to be displayed.
@@ -123,22 +227,36 @@ This logs the value of the metric in the attribute `logged` of `xp`. It also upd
 
 Every metric is indexed by either a `ValueIndex` or a `TimeIndex`. This allows to have values for an x-axis when logging the information. The index is modified when the metric is logged (more on that below). By default, `TimeIndex` updates its value at the time of the log, and `ValueIndex` increments a counter by one.
 
-The default behavior is that all metrics are indexed by a `TimeIndex`<sup>1</sup>. This default behavior can be changed to value indexing, by setting `time_indexing=False` when creating the `Experiment`.
+The default behavior is that all metrics are indexed by a `TimeIndex` (except for `TimeMetric`, which is always indexed by a `ValueIndex`). This default behavior can be changed to value indexing, by setting `time_indexing=False` when creating the `Experiment`.
 
-<sup>1</sup>except for `TimeMetric`, which is always indexed by a `ValueIndex`.
+A custom indexing value can be used when logging the metric:
+```python
+xp = logger.Experiment("my_xp_name", time_indexing=False)
+xp.SimpleMetric(name="score")
+xp.Score.update(0.1)
+xp.Score.log(10) # log with index 10 (instead of default start of 0)
+xp.Score.update(0.3)
+xp.Score.log() # log with index 10+1=1
+xp.Score.update(0.4)
+xp.Score.log(idx=100) # log with custom index 100
+xp.Score.update(0.5)
+xp.log_metric(name="score", idx=50) # log with custom index 50 (different syntax)
+# The logged values are [[10, 0.1], [11, 0.3], [50, 0.5], [100, 0.4]]
+```
+
 
 ### Resetting a Metric
 
-Some metrics need to be reset manually, e.g. `AvgMetric` or `TimeMetric`. This can be done through the `reset` method:
+For some metrics, the value depends on the last reset: for instance `AvgMetric` average all values since the last reset, and `TimeMetric` measures the elapsed time since the last reset. Metrics can be reinitialized through the `reset` method:
 ```python
 xp = logger.Experiment("my_xp_name")
 xp.SumMetric(name="score")
 xp.Score.update(3)
-xp.Score.get()  # return 3.
+xp.Score.get()  # returns 3.
 xp.Score.update(2)
-xp.Score.get()  # return 5.
+xp.Score.get()  # returns 5.
 xp.Score.reset()
-xp.Score.get()  # return 0.
+xp.Score.get()  # returns 0.
 ```
 
 Note that instead of calling `log()` followed by `reset()`, a metric can be logged and reset through a single call to `log_and_reset()`.
@@ -172,92 +290,3 @@ xp.logged  # {'cool': {'score': {[0, 2.5], [1, 3.6]}}, 'cooler': {'score': {[0, 
 xp.to_visdom()  # send the logged data to visdom
 ```
 
-## Example
-In `examples/example.py`, we provide a toy example that puts together these functionalities:
-
-```python
-import logger
-import numpy as np
-
-from builtins import range
-
-
-#...
-# code to generate fake data
-#...
-
-
-n_epochs = 10
-use_visdom = True
-time_indexing = True
-# some hyperparameters we wish to save for this experiment
-hyperparameters = dict(regularization=1,
-                       n_epochs=n_epochs)
-# options for the remote visualization backend
-visdom_opts = dict(server='http://localhost',
-                   port=8097)
-xp = logger.Experiment("xp_name", use_visdom=use_visdom,
-                       visdom_opts=visdom_opts,
-                       time_indexing=time_indexing)
-# log the hyperparameters of the experiment
-xp.log_config(hyperparameters)
-# create parent metric for training metrics (easier interface)
-xp.ParentWrapper(tag='train', name='parent',
-                 children=(xp.AvgMetric(name='loss'),
-                           xp.AvgMetric(name='acc1'),
-                           xp.AvgMetric(name='acck')))
-# same for validation metrics (note all children inherit tag from parent)
-xp.ParentWrapper(tag='val', name='parent',
-                 children=(xp.AvgMetric(name='loss'),
-                           xp.AvgMetric(name='acc1'),
-                           xp.AvgMetric(name='acck')))
-xp.AvgMetric(tag="test", name="acc1")
-xp.AvgMetric(tag="test", name="acck")
-
-for epoch in range(n_epochs):
-    # accumulate metrics over epoch
-    for (x, y) in training_data():
-        loss, acc1, acck = oracle(x, y)
-        xp.Parent_Train.update(loss=loss, acc1=acc1,
-                               acck=acck, n=len(x))
-    xp.Parent_Train.log_and_reset()
-
-    for (x, y) in validation_data():
-        loss, acc1, acck = oracle(x, y)
-        xp.Parent_Val.update(loss=loss, acc1=acc1,
-                             acck=acck, n=len(x))
-    xp.Parent_Val.log()
-    xp.Parent_Val.reset()
-
-for (x, y) in test_data():
-    _, acc1, acck = oracle(x, y)
-    # update metrics individually
-    xp.Acc1_Test.update(acc1, n=len(x))
-    xp.Acck_Test.update(acck, n=len(x))
-
-# access to current values of metric with property of xp in lower case:
-# xp.acc1_test is equivalent to xp.Acc1_Test.get()
-acc1_test = xp.acc1_test
-acck_test = xp.acck_test
-print("Performance On Test Data:")
-print("-" * 50)
-print("Prec@1: \t {0:.2f}%".format(acc1_test))
-print("Prec@k: \t {0:.2f}%".format(acck_test))
-
-# save to pickle file
-xp.to_pickle("my_pickle_log.pkl")
-# save to json file
-xp.to_json("my_json_log.json")
-
-xp2 = logger.Experiment("")
-xp2.from_json("my_json_log.json")
-xp2.to_visdom()
-
-xp3 = logger.Experiment("")
-xp3.from_pickle("my_pickle_log.pkl")
-xp3.to_visdom()
-
-```
-
-This generates the following plot on `visdom`:
-![alt text](examples/example.jpg)

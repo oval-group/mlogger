@@ -3,6 +3,8 @@ import numpy as np
 
 from builtins import range
 
+np.random.seed(1234)
+
 
 def random_data_generator():
     """ fake data generator
@@ -37,20 +39,20 @@ def oracle(data, target):
     return loss, acc1, acck
 
 
+# some hyper-parameters of the experiment
+lr = 0.01
 n_epochs = 10
-use_visdom = True
-time_indexing = False
-# some hyperparameters we wish to save for this experiment
-hyperparameters = dict(regularization=1,
-                       n_epochs=n_epochs)
-# options for the remote visualization backend
-visdom_opts = dict(server='http://localhost',
-                   port=8097)
-xp = logger.Experiment("xp_name", use_visdom=use_visdom,
-                       visdom_opts=visdom_opts,
-                       time_indexing=time_indexing)
+
+#----------------------------------------------------------
+# Prepare logging
+#----------------------------------------------------------
+
+# create Experiment
+xp = logger.Experiment("xp_name", use_visdom=True,
+                       visdom_opts={'server': 'http://localhost', 'port': 8097},
+                       time_indexing=False)
 # log the hyperparameters of the experiment
-xp.log_config(hyperparameters)
+xp.log_config({'lr': lr, 'n_epochs': n_epochs})
 # create parent metric for training metrics (easier interface)
 xp.ParentWrapper(tag='train', name='parent',
                  children=(xp.AvgMetric(name='loss'),
@@ -61,48 +63,62 @@ xp.ParentWrapper(tag='val', name='parent',
                  children=(xp.AvgMetric(name='loss'),
                            xp.AvgMetric(name='acc1'),
                            xp.AvgMetric(name='acck')))
+best1 = xp.BestMetric(tag="val-best", name="acc1")
+bestk = xp.BestMetric(tag="val-best", name="acck")
 xp.AvgMetric(tag="test", name="acc1")
 xp.AvgMetric(tag="test", name="acck")
 
+#----------------------------------------------------------
+# Training
+#----------------------------------------------------------
+
 for epoch in range(n_epochs):
-    # accumulate metrics over epoch
+    # train model
     for (x, y) in training_data():
         loss, acc1, acck = oracle(x, y)
+        # accumulate metrics (average over mini-batches)
         xp.Parent_Train.update(loss=loss, acc1=acc1,
                                acck=acck, n=len(x))
+    # log metrics (i.e. store in xp and send to visdom) and reset
     xp.Parent_Train.log_and_reset()
 
     for (x, y) in validation_data():
         loss, acc1, acck = oracle(x, y)
         xp.Parent_Val.update(loss=loss, acc1=acc1,
                              acck=acck, n=len(x))
-    xp.Parent_Val.log()
-    xp.Parent_Val.reset()
+    acc1_val = xp.acc1_val()  # current value of acc1 on val
+    acck_val = xp.acck_val()  # current value of acc1 on val
+    best1.update(acc1_val)  # update only if better than previous values
+    bestk.update(acck_val)  # update only if better than previous values
+    xp.Parent_Val.log_and_reset()
+    best1.log()
+    bestk.log()
 
 for (x, y) in test_data():
     _, acc1, acck = oracle(x, y)
     # update metrics individually
     xp.Acc1_Test.update(acc1, n=len(x))
     xp.Acck_Test.update(acck, n=len(x))
+xp.log_with_tag('test')
 
-# access to current values of metric with property of xp in lower case:
-# xp.acc1_test is equivalent to xp.Acc1_Test.get()
-acc1_test = xp.acc1_test()
-acck_test = xp.acck_test()
+print("=" * 50)
+print("Best Performance On Validation Data:")
+print("-" * 50)
+print("Prec@1: \t {0:.2f}%".format(best1.get()))
+print("Prec@k: \t {0:.2f}%".format(bestk.get()))
+print("=" * 50)
 print("Performance On Test Data:")
 print("-" * 50)
-print("Prec@1: \t {0:.2f}%".format(acc1_test))
-print("Prec@k: \t {0:.2f}%".format(acck_test))
+print("Prec@1: \t {0:.2f}%".format(xp.acc1_test()))
+print("Prec@k: \t {0:.2f}%".format(xp.acck_test()))
 
-# save to pickle file
-xp.to_pickle("my_pickle_log.pkl")
-# save to json file
-xp.to_json("my_json_log.json")
+#----------------------------------------------------------
+# Save & load experiment
+#----------------------------------------------------------
 
-xp2 = logger.Experiment("")
-xp2.from_json("my_json_log.json")
-xp2.to_visdom()
+# save file
+xp.to_json("my_json_log.json")  # or xp.to_pickle("my_pickle_log.pkl")
 
-xp3 = logger.Experiment("")
-xp3.from_pickle("my_pickle_log.pkl")
-xp3.to_visdom()
+xp2 = logger.Experiment("")  # new Experiment instance
+xp2.from_json("my_json_log.json")  # or xp.from_pickle("my_pickle_log.pkl")
+xp2.to_visdom(visdom_opts={'server': 'http://localhost', 'port': 8097})  # plot again data on visdom
