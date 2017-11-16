@@ -2,14 +2,14 @@ import unittest
 import time
 import numpy as np
 
-from logger.indexer import TimeIndexer_, ValueIndexer_
+from logger.index import TimeIndex_, ValueIndex_
 
 
 class TestTimeIndexer(unittest.TestCase):
 
     def setUp(self):
 
-        self.indexer = TimeIndexer_()
+        self.indexer = TimeIndex_()
         self.start = self.indexer.start
 
     def test_init(self):
@@ -30,7 +30,7 @@ class TestValueIndexer(unittest.TestCase):
 
     def setUp(self):
 
-        self.indexer = ValueIndexer_()
+        self.indexer = ValueIndex_()
 
     def test_init(self):
 

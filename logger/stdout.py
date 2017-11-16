@@ -1,7 +1,7 @@
 import sys
 
 
-class Console(object):
+class WriteOut_(object):
     def __init__(self, filename):
         self.terminal = sys.stdout
         self.log = open(filename, 'a')
@@ -31,4 +31,4 @@ class Console(object):
 
 
 def stdout_to(filename):
-    return Console(filename)
+    return WriteOut_(filename)

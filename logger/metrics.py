@@ -2,21 +2,20 @@ import numpy as np
 
 from future.utils import viewitems
 
-from .indexer import TimeIndexer_, ValueIndexer_
+from .index import TimeIndex_, ValueIndex_
 from .utils import to_float
 
 
 class BaseMetric_(object):
     def __init__(self, name, tag, time_idx, to_plot):
         """ Basic metric
-        Includes a timer.
         """
         self.tag = tag
         self.name = name
         if time_idx:
-            self.index = TimeIndexer_()
+            self.index = TimeIndex_()
         else:
-            self.index = ValueIndexer_()
+            self.index = ValueIndex_()
         self.time_idx = time_idx
         self.to_plot = to_plot
         self.reset_hooks()
@@ -79,7 +78,7 @@ class TimeMetric_(BaseMetric_):
         super(TimeMetric_, self).__init__(name, tag,
                                           time_idx=False,
                                           to_plot=to_plot)
-        self._timer = TimeIndexer_()
+        self._timer = TimeIndex_()
 
     def reset(self):
         self._timer.reset()
