@@ -1,82 +1,40 @@
-import time
 import numpy as np
-
-try:
-    import torch
-    import torch.autograd as torch_autograd
-except ImportError:
-    torch = None
-    torch_autograd = None
-
-
-def to_float(val):
-    """ Check that val is one of the following:
-    - pytorch autograd Variable with one element
-    - pytorch tensor with one element
-    - numpy array with one element
-    - any type supporting float() operation
-    And convert val to float
-    """
-
-    if isinstance(val, np.ndarray):
-        assert val.size == 1, \
-            "val should have one element (got {})".format(val.size)
-        return float(val.squeeze()[0])
-
-    if torch is not None:
-        if isinstance(val, torch_autograd.Variable):
-            val = val.data
-        if torch.is_tensor(val):
-            assert torch.numel(val) == 1, \
-                "val should have one element (got {})".format(torch.numel(val))
-            return float(val.squeeze()[0])
-
-    try:
-        return float(val)
-    except:
-        raise TypeError("Unsupported type for val ({})".format(type(val)))
 
 from future.utils import viewitems
 
-
-class BaseTimer_(object):
-    def __init__(self):
-        super(BaseTimer_, self).__init__()
-        self.reset()
-
-    def reset(self):
-        self.start_time = time.time()
-        self.end_time = self.start_time
-
-    def update(self, val=None, n=None, timed=None):
-        """ 'val' and 'timed' are redundant here in order to have
-        a common interface for all metrics.
-        """
-        if val is not None:
-            self.end_time = to_float(val)
-        elif timed is not None:
-            self.end_time = to_float(timed)
-        else:
-            self.end_time = time.time()
-
-    def get(self):
-        return self.end_time - self.start_time
+from .index import TimeIndex_, ValueIndex_
+from .utils import to_float
 
 
 class BaseMetric_(object):
-    def __init__(self, name, tag):
+    def __init__(self, name, tag, time_idx, to_plot):
         """ Basic metric
-        Includes a timer.
         """
         self.tag = tag
         self.name = name
-        self.timer = BaseTimer_()
+        if time_idx:
+            self.index = TimeIndex_()
+        else:
+            self.index = ValueIndex_()
+        self.time_idx = time_idx
+        self.to_plot = to_plot
+        self.reset_hooks()
+
+    def reset_hooks(self):
+        self.hooks = ()
+
+    def add_hook(self, hook):
+        self.hooks += (hook,)
+
+    def hook(self):
+        for hook in self.hooks:
+            hook()
 
     def reset(self):
         raise NotImplementedError("reset should be re-implemented "
                                   "for each metric")
 
-    def update(self, val, n=None, timed=None):
+    def update(self, val, n=None):
         raise NotImplementedError("update should be re-implemented "
                                   "for each metric")
 
@@ -84,40 +42,74 @@ class BaseMetric_(object):
         raise NotImplementedError("get should be re-implemented "
                                   "for each metric")
 
+    def name_id(self):
+        if self.tag == "default":
+            name_id = self.name
+        else:
+            name_id = "{}_{}".format(self.name, self.tag)
+        name_id = name_id.lower()
+        return name_id
+
 
 class SimpleMetric_(BaseMetric_):
-    def __init__(self, name, tag):
+    def __init__(self, name, tag, time_idx, to_plot):
         """ Stores a value and elapsed time
         since last update and last reset
         """
-        super(SimpleMetric_, self).__init__(name, tag)
+        super(SimpleMetric_, self).__init__(name, tag, time_idx, to_plot)
         self.reset()
 
     def reset(self):
         self.val = 0.
 
-    def update(self, val, n=None, timed=None):
+    def update(self, val, n=None):
         self.val = to_float(val)
-        self.timer.update(timed)
+        self.hook()
 
     def get(self):
         return self.val
 
 
 class TimeMetric_(BaseMetric_):
-    def __init__(self, name, tag):
+    def __init__(self, name, tag, to_plot, time_idx=False):
         """ Stores elapsed time since last update and last reset
+        Note: ignores time_idx argument - always indexed by value
         """
-        super(TimeMetric_, self).__init__(name, tag)
+        assert not time_idx, "a TimeMetric cannot be indexed by time"
+        super(TimeMetric_, self).__init__(name, tag,
+                                          time_idx=False,
+                                          to_plot=to_plot)
+        self._timer = TimeIndex_()
 
     def reset(self):
-        self.timer.reset()
+        self._timer.reset()
 
-    def update(self, val=None, n=None, timed=None):
-        self.timer.update(val, n, timed)
+    def update(self, val=None, n=None):
+        self._timer.update(val)
+        self.hook()
 
     def get(self):
-        return self.timer.get()
+        return self._timer.get()
+
+
+class BestMetric_(BaseMetric_):
+    def __init__(self, name, tag, time_idx, to_plot, mode='max'):
+        assert mode in ('min', 'max')
+        super(BestMetric_, self).__init__(name, tag, time_idx, to_plot)
+        self.mode = 1 if mode == 'max' else -1
+        self.reset()
+
+    def reset(self):
+        self.val = -self.mode * np.inf
+
+    def update(self, val, n=None):
+        val = to_float(val)
+        if self.mode * val > self.mode * self.val:
+            self.val = val
+            self.hook()
+
+    def get(self):
+        return self.val
 
 
 class Accumulator_(BaseMetric_):
@@ -125,8 +117,8 @@ class Accumulator_(BaseMetric_):
     Accumulator.
     Credits to the authors of pytorch/tnt for this.
     """
-    def __init__(self, name, tag):
-        super(Accumulator_, self).__init__(name, tag)
+    def __init__(self, name, tag, time_idx, to_plot):
+        super(Accumulator_, self).__init__(name, tag, time_idx, to_plot)
         self.reset()
 
     def reset(self):
@@ -137,41 +129,41 @@ class Accumulator_(BaseMetric_):
     def set_const(self, const):
         self.const = to_float(const)
 
-    def update(self, val, n=1, timed=None):
+    def update(self, val, n=1):
         self.acc += to_float(val) * n
         self.count += n
-        self.timer.update(timed)
+        self.hook()
 
     def get(self):
         raise NotImplementedError("Accumulator should be subclassed")
 
 
 class AvgMetric_(Accumulator_):
-    def __init__(self, name, tag):
-        super(AvgMetric_, self).__init__(name, tag)
+    def __init__(self, name, tag, time_idx, to_plot):
+        super(AvgMetric_, self).__init__(name, tag, time_idx, to_plot)
 
     def get(self):
         return self.const + self.acc * 1. / self.count
 
 
 class SumMetric_(Accumulator_):
-    def __init__(self, name, tag):
-        super(SumMetric_, self).__init__(name, tag)
+    def __init__(self, name, tag, time_idx, to_plot):
+        super(SumMetric_, self).__init__(name, tag, time_idx, to_plot)
 
     def get(self):
         return self.const + self.acc
 
 
-class ParentWrapper_(object):
-    def __init__(self, children):
-        super(ParentWrapper_, self).__init__()
+class ParentWrapper_(BaseMetric_):
+    def __init__(self, name, tag, children):
+        super(ParentWrapper_, self).__init__(name, tag, False, False)
         self.children = dict()
         for child in children:
             self.children[child.name] = child
 
-    def update(self, n=1, timed=None, **kwargs):
+    def update(self, n=1, **kwargs):
         for (key, value) in kwargs.items():
-            self.children[key].update(value, n, timed)
+            self.children[key].update(value, n)
 
     def reset(self):
         for child in self.children.values():
@@ -182,3 +174,27 @@ class ParentWrapper_(object):
         for (name, child) in viewitems(self.children):
             res[name] = child.get()
         return res
+
+
+class DynamicMetric_(BaseMetric_):
+    def __init__(self, name, tag, time_idx, to_plot, fun=None):
+        """
+        """
+        super(DynamicMetric_, self).__init__(name, tag, time_idx, to_plot)
+        self.reset()
+        if fun is not None:
+            self.set_fun(fun)
+
+    def reset(self):
+        self.fun = lambda: None
+        self.val = None
+
+    def update(self):
+        self.val = self.fun()
+        self.hook()
+
+    def set_fun(self, fun):
+        self.fun = fun
+
+    def get(self):
+        return self.val
