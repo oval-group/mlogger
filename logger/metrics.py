@@ -75,6 +75,7 @@ class TimeMetric_(BaseMetric_):
         """ Stores elapsed time since last update and last reset
         Note: ignores time_idx argument - always indexed by value
         """
+        assert not time_idx, "a TimeMetric cannot be indexed by time"
         super(TimeMetric_, self).__init__(name, tag,
                                           time_idx=False,
                                           to_plot=to_plot)

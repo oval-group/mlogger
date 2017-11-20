@@ -53,8 +53,7 @@ class Plotter(object):
     def _plot_xy(self, name, tag, x, y, time_idx=True):
         """
         Creates a window if it does not exist yet.
-        Returns True / non-empty string if data has been sent successfully,
-        False otherwise.
+        Returns True if data has been sent successfully, False otherwise.
         """
         xlabel = 'Time (s)' if time_idx else 'Index'
         if name not in list(self.windows.keys()):
@@ -62,9 +61,9 @@ class Plotter(object):
             self.windows[name] = self.viz.line(Y=y, X=x, opts=opts)
             return True
         else:
-            return self.viz.updateTrace(Y=y, X=x, name=tag,
-                                        win=self.windows[name],
-                                        append=True)
+            return bool(self.viz.updateTrace(Y=y, X=x, name=tag,
+                                             win=self.windows[name],
+                                             append=True))
 
     def plot_xp(self, xp):
 

@@ -26,6 +26,7 @@ class Experiment(object):
         - log_git_hash (bool): retrieve current commit hash to log code status
         - use_visdom (bool): monitor metrics logged on visdom
         - visdom_opts (dict): options for visdom
+        - time_indexing (bool): use time to index values (otherwise counter)
         """
 
         super(Experiment, self).__init__()
