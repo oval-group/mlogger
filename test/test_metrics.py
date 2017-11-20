@@ -12,11 +12,9 @@ class TestTimeMetric(unittest.TestCase):
 
         self.name = "my_name"
         self.tag = "my_tag"
-        self.time_idx = True
         self.to_plot = False
         self.metric = TimeMetric_(name=self.name,
                                   tag=self.tag,
-                                  time_idx=self.time_idx,
                                   to_plot=self.to_plot)
         self.start = self.metric._timer.start
 
