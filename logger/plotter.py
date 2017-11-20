@@ -1,11 +1,34 @@
 import numpy as np
 import pprint
 
+from collections import defaultdict
+
 # optional visdom
 try:
     import visdom
 except ImportError:
     visdom = None
+
+
+class Cache(object):
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self._x = []
+        self._y = []
+
+    def update(self, metric):
+        self._x.append(metric.index.get())
+        self._y.append(metric.get())
+
+    @property
+    def x(self):
+        return np.array(self._x)
+
+    @property
+    def y(self):
+        return np.array(self._y)
 
 
 class Plotter(object):
@@ -25,20 +48,23 @@ class Plotter(object):
         self.viz = visdom.Visdom(**visdom_opts)
         self.windows = {}
         self.append = {}
+        self.cache = defaultdict(Cache)
 
     def _plot_xy(self, name, tag, x, y, time_idx=True):
+        """
+        Creates a window if it does not exist yet.
+        Returns True / non-empty string if data has been sent successfully,
+        False otherwise.
+        """
         xlabel = 'Time (s)' if time_idx else 'Index'
         if name not in list(self.windows.keys()):
-            self.windows[name] = \
-                self.viz.line(Y=y, X=x,
-                              opts={'legend': [tag],
-                                    'title': name,
-                                    'xlabel': xlabel})
+            opts = {'legend': [tag], 'title': name, 'xlabel': xlabel}
+            self.windows[name] = self.viz.line(Y=y, X=x, opts=opts)
+            return True
         else:
-            self.viz.updateTrace(Y=y, X=x,
-                                 name=tag,
-                                 win=self.windows[name],
-                                 append=True)
+            return self.viz.updateTrace(Y=y, X=x, name=tag,
+                                        win=self.windows[name],
+                                        append=True)
 
     def plot_xp(self, xp):
 
@@ -60,9 +86,13 @@ class Plotter(object):
 
     def plot_metric(self, metric):
         name, tag = metric.name, metric.tag
-        x = np.array([metric.index.get()])
-        y = np.array([metric.get()])
-        self._plot_xy(name, tag, x, y, metric.time_idx)
+        cache = self.cache[metric.name_id()]
+        cache.update(metric)
+        sent = self._plot_xy(name, tag, cache.x, cache.y,
+                             metric.time_idx)
+        # clear cache if data has been sent successfully
+        if sent:
+            cache.clear()
 
     def plot_config(self, config):
         # format dictionary with pretty print
