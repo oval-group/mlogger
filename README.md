@@ -15,9 +15,6 @@ The following example shows the functionalities of the package (full example cod
 import logger
 import numpy as np
 
-from builtins import range
-
-
 #...
 # code to generate fake data
 #...
@@ -70,11 +67,9 @@ for epoch in range(n_epochs):
         loss, acc1, acck = oracle(x, y)
         xp.Parent_Val.update(loss=loss, acc1=acc1,
                              acck=acck, n=len(x))
-    acc1_val = xp.acc1_val()  # current value of acc1 on val
-    acck_val = xp.acck_val()  # current value of acc1 on val
-    best1.update(acc1_val)  # update only if better than previous values
-    bestk.update(acck_val)  # update only if better than previous values
     xp.Parent_Val.log_and_reset()
+    best1.update(xp.acc1_val)  # will update only if better than previous values
+    bestk.update(xp.acck_val)  # will update only if better than previous values
     best1.log()
     bestk.log()
 
@@ -93,8 +88,8 @@ print("Prec@k: \t {0:.2f}%".format(bestk.get()))
 print("=" * 50)
 print("Performance On Test Data:")
 print("-" * 50)
-print("Prec@1: \t {0:.2f}%".format(xp.acc1_test()))
-print("Prec@k: \t {0:.2f}%".format(xp.acck_test()))
+print("Prec@1: \t {0:.2f}%".format(xp.acc1_test))
+print("Prec@k: \t {0:.2f}%".format(xp.acck_test))
 
 #----------------------------------------------------------
 # Save & load experiment
@@ -106,7 +101,6 @@ xp.to_json("my_json_log.json")  # or xp.to_pickle("my_pickle_log.pkl")
 xp2 = logger.Experiment("")  # new Experiment instance
 xp2.from_json("my_json_log.json")  # or xp.from_pickle("my_pickle_log.pkl")
 xp2.to_visdom(visdom_opts={'server': 'http://localhost', 'port': 8097})  # plot again data on visdom
-
 ```
 
 This generates (twice) the following plots on `visdom`:
@@ -180,13 +174,12 @@ my_metric = xp.Score
 
 ### Updating & Getting the Value of a Metric
 
-The value of a metric is updated through the `update` method, and obtained by a call to the `get` method. The value can also be obtained by a call to the `Experiment` object on the method named as `{}_{}.format(name, tag).lower()`:
+The value of a metric is updated through the `update` method, and obtained by a call to the `get` method:
 ```python
 xp = logger.Experiment("my_xp_name")
 xp.SimpleMetric(name="score")
 xp.Score.update(10) # set the value of the metric to 10.
 xp.Score.get()  # returns 10.
-xp.score()  # returns 10.
 ```
 
 The value given in the `update` method of a metric must be one of the following:
@@ -207,7 +200,6 @@ xp.ParentWrapper(name="parent",
 xp.Parent.update(child1=3, child2=5) # set the value of the metric xp.Child1 to 3. and xp.Child2 to 5.
 xp.Parent.update(child3=9) # set the value of the metric xp.Child3 to 9.
 xp.Parent.get()  # returns {'child1': 3., 'child2': 5., 'child3': 9.}
-xp.parent()  # returns {'child1': 3., 'child2': 5., 'child3': 9.}
 ```
 
 ### Logging a Metric
@@ -218,10 +210,21 @@ xp = logger.Experiment("my_xp_name")
 xp.SimpleMetric(name="score")
 xp.Score.update(10) # set the value of the metric to 10
 xp.Score.log() # log value of metric (preferred syntax)
-xp.log_metric(name="score") # equivalent syntax (NB: logging twice creates two logged values)
+xp.log_metric(name="score") # equivalent syntax (NB: logging a second time creates a second logged value)
 ```
 
 This logs the value of the metric in the attribute `logged` of `xp`. It also updates the index of the metric (see next section). If `xp` is connected to a plotting backend (e.g. `visdom`), this also sends the value of the metric to be displayed.
+
+The last logged value of a metric can be accessed with the attribute formatted as `{}_{}.format(name, tag).lower()`:
+```python
+xp = logger.Experiment("my_xp_name")
+xp.SimpleMetric(name="score")
+xp.Score.update(10) # set the value of the metric to 10.
+xp.Score.log()
+xp.score  # returns 10.
+xp.Score.update(11) # set the value of the metric to 11.
+xp.score  # still returns 10. (value of 11 not logged)
+```
 
 ### Indexing a Metric
 

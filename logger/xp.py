@@ -107,8 +107,9 @@ class Experiment(object):
 
         # set attribute in title format for metric
         setattr(self, Name_Id, metric)
-        # set property in lower format for dynamic value of metric
-        setattr(self, name_id, lambda: metric.get())
+        # set attribute in lower format to store logged value of metric
+        # initial value of None
+        setattr(self, name_id, None)
 
         setattr(metric, 'log',
                 lambda idx=None: self.log_metric(metric, idx))
@@ -161,6 +162,8 @@ class Experiment(object):
             return
 
         metric.index.update(idx)
+        # update logged value of metric
+        setattr(self, metric.name_id(), metric.get())
         self.logged[metric.name_id()][metric.index.get()] = metric.get()
 
         if self.use_visdom and metric.to_plot:

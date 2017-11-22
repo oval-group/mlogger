@@ -86,11 +86,9 @@ for epoch in range(n_epochs):
         loss, acc1, acck = oracle(x, y)
         xp.Parent_Val.update(loss=loss, acc1=acc1,
                              acck=acck, n=len(x))
-    acc1_val = xp.acc1_val()  # current value of acc1 on val
-    acck_val = xp.acck_val()  # current value of acc1 on val
-    best1.update(acc1_val)  # update only if better than previous values
-    bestk.update(acck_val)  # update only if better than previous values
     xp.Parent_Val.log_and_reset()
+    best1.update(xp.acc1_val)  # will update only if better than previous values
+    bestk.update(xp.acck_val)  # will update only if better than previous values
     best1.log()
     bestk.log()
 
@@ -109,8 +107,8 @@ print("Prec@k: \t {0:.2f}%".format(bestk.get()))
 print("=" * 50)
 print("Performance On Test Data:")
 print("-" * 50)
-print("Prec@1: \t {0:.2f}%".format(xp.acc1_test()))
-print("Prec@k: \t {0:.2f}%".format(xp.acck_test()))
+print("Prec@1: \t {0:.2f}%".format(xp.acc1_test))
+print("Prec@k: \t {0:.2f}%".format(xp.acck_test))
 
 #----------------------------------------------------------
 # Save & load experiment
