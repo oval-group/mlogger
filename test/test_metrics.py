@@ -54,7 +54,7 @@ class TestSimpleMetric(unittest.TestCase):
 
         assert self.metric.name == "my_name"
         assert self.metric.tag == "my_tag"
-        assert self.metric.val == 0.
+        assert self.metric._val == 0.
 
     def test_update(self):
 
@@ -92,11 +92,11 @@ class TestBestMetric(unittest.TestCase):
 
         assert self.metric_min.name == "my_name"
         assert self.metric_min.tag == "my_tag"
-        assert self.metric_min.val == np.inf
+        assert self.metric_min._val == np.inf
 
         assert self.metric_max.name == "my_name"
         assert self.metric_max.tag == "my_tag"
-        assert self.metric_max.val == -np.inf
+        assert self.metric_max._val == -np.inf
 
     def test_update(self):
 

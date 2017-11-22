@@ -68,10 +68,8 @@ for epoch in range(n_epochs):
         xp.Parent_Val.update(loss=loss, acc1=acc1,
                              acck=acck, n=len(x))
     xp.Parent_Val.log_and_reset()
-    best1.update(xp.acc1_val)  # will update only if better than previous values
-    bestk.update(xp.acck_val)  # will update only if better than previous values
-    best1.log()
-    bestk.log()
+    best1.update(xp.acc1_val).log()  # will update only if better than previous values
+    bestk.update(xp.acck_val).log()  # will update only if better than previous values
 
 for (x, y) in test_data():
     _, acc1, acck = oracle(x, y)
@@ -83,8 +81,8 @@ xp.log_with_tag('test')
 print("=" * 50)
 print("Best Performance On Validation Data:")
 print("-" * 50)
-print("Prec@1: \t {0:.2f}%".format(best1.get()))
-print("Prec@k: \t {0:.2f}%".format(bestk.get()))
+print("Prec@1: \t {0:.2f}%".format(best1.value))
+print("Prec@k: \t {0:.2f}%".format(bestk.value))
 print("=" * 50)
 print("Performance On Test Data:")
 print("-" * 50)
@@ -174,12 +172,12 @@ my_metric = xp.Score
 
 ### Updating & Getting the Value of a Metric
 
-The value of a metric is updated through the `update` method, and obtained by a call to the `get` method:
+The value of a metric is updated through the `update` method, and is obtained through the property `value` (equivalent to a call to the `get` method in previous versions, still accessible):
 ```python
 xp = logger.Experiment("my_xp_name")
 xp.SimpleMetric(name="score")
 xp.Score.update(10) # set the value of the metric to 10.
-xp.Score.get()  # returns 10.
+xp.Score.value  # returns 10.
 ```
 
 The value given in the `update` method of a metric must be one of the following:
@@ -190,16 +188,24 @@ The value given in the `update` method of a metric must be one of the following:
 
 It is then converted to a python `float` number.
 
-For a `ParentWrapper`, the arguments of `update` must be named with child names, and the `get` method returns a dictionary:
+For a `ParentWrapper`, the arguments of `update` must be named with child names, and the `value` property returns a dictionary:
 ```python
 xp = logger.Experiment("my_xp_name")
 xp.ParentWrapper(name="parent",
                  children=(xp.SimpleMetric("child1"),
                            xp.SimpleMetric("child2"),
-                           xp.SimpleMetric("child3"))
+                           xp.SimpleMetric("child3")))
 xp.Parent.update(child1=3, child2=5) # set the value of the metric xp.Child1 to 3. and xp.Child2 to 5.
 xp.Parent.update(child3=9) # set the value of the metric xp.Child3 to 9.
-xp.Parent.get()  # returns {'child1': 3., 'child2': 5., 'child3': 9.}
+xp.Parent.value  # returns {'child1': 3., 'child2': 5., 'child3': 9.}
+```
+
+Note that `update` returns the metric, which allows for the following syntax:
+```python
+xp = logger.Experiment("my_xp_name")
+xp.SumMetric(name="score")
+xp.Score.update(10).update(1) # add 10. and then 1.
+xp.Score.value  # returns 11.
 ```
 
 ### Logging a Metric
@@ -210,7 +216,7 @@ xp = logger.Experiment("my_xp_name")
 xp.SimpleMetric(name="score")
 xp.Score.update(10) # set the value of the metric to 10
 xp.Score.log() # log value of metric (preferred syntax)
-xp.log_metric(name="score") # equivalent syntax (NB: logging a second time creates a second logged value)
+xp.log_metric(xp.Score) # equivalent syntax (NB: logging a second time creates a second logged value)
 ```
 
 This logs the value of the metric in the attribute `logged` of `xp`. It also updates the index of the metric (see next section). If `xp` is connected to a plotting backend (e.g. `visdom`), this also sends the value of the metric to be displayed.
@@ -243,7 +249,7 @@ xp.Score.log() # log with index 10+1=1
 xp.Score.update(0.4)
 xp.Score.log(idx=100) # log with custom index 100
 xp.Score.update(0.5)
-xp.log_metric(name="score", idx=50) # log with custom index 50 (different syntax)
+xp.log_metric(xp.Score, idx=50) # log with custom index 50 (different syntax)
 # The logged values are [[10, 0.1], [11, 0.3], [50, 0.5], [100, 0.4]]
 ```
 
@@ -255,11 +261,11 @@ For some metrics, the value depends on the last reset: for instance `AvgMetric` 
 xp = logger.Experiment("my_xp_name")
 xp.SumMetric(name="score")
 xp.Score.update(3)
-xp.Score.get()  # returns 3.
+xp.Score.value  # returns 3.
 xp.Score.update(2)
-xp.Score.get()  # returns 5.
+xp.Score.value  # returns 5.
 xp.Score.reset()
-xp.Score.get()  # returns 0.
+xp.Score.value  # returns 0.
 ```
 
 Note that instead of calling `log()` followed by `reset()`, a metric can be logged and reset through a single call to `log_and_reset()`.

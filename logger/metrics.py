@@ -50,6 +50,10 @@ class BaseMetric_(object):
         name_id = name_id.lower()
         return name_id
 
+    @property
+    def value(self):
+        return self.get()
+
 
 class SimpleMetric_(BaseMetric_):
     def __init__(self, name, tag, time_idx, to_plot):
@@ -60,14 +64,15 @@ class SimpleMetric_(BaseMetric_):
         self.reset()
 
     def reset(self):
-        self.val = 0.
+        self._val = 0.
 
     def update(self, val, n=None):
-        self.val = to_float(val)
+        self._val = to_float(val)
         self.hook()
+        return self
 
     def get(self):
-        return self.val
+        return self._val
 
 
 class TimeMetric_(BaseMetric_):
@@ -87,6 +92,7 @@ class TimeMetric_(BaseMetric_):
     def update(self, val=None, n=None):
         self._timer.update(val)
         self.hook()
+        return self
 
     def get(self):
         return self._timer.get()
@@ -100,16 +106,17 @@ class BestMetric_(BaseMetric_):
         self.reset()
 
     def reset(self):
-        self.val = -self.mode * np.inf
+        self._val = -self.mode * np.inf
 
     def update(self, val, n=None):
         val = to_float(val)
-        if self.mode * val > self.mode * self.val:
-            self.val = val
+        if self.mode * val > self.mode * self._val:
+            self._val = val
             self.hook()
+        return self
 
     def get(self):
-        return self.val
+        return self._val
 
 
 class Accumulator_(BaseMetric_):
@@ -133,6 +140,7 @@ class Accumulator_(BaseMetric_):
         self.acc += to_float(val) * n
         self.count += n
         self.hook()
+        return self
 
     def get(self):
         raise NotImplementedError("Accumulator should be subclassed")
@@ -164,6 +172,7 @@ class ParentWrapper_(BaseMetric_):
     def update(self, n=1, **kwargs):
         for (key, value) in kwargs.items():
             self.children[key].update(value, n)
+        return self
 
     def reset(self):
         for child in self.children.values():
@@ -187,14 +196,15 @@ class DynamicMetric_(BaseMetric_):
 
     def reset(self):
         self.fun = lambda: None
-        self.val = None
+        self._val = None
 
     def update(self):
-        self.val = self.fun()
+        self._val = self.fun()
         self.hook()
+        return self
 
     def set_fun(self, fun):
         self.fun = fun
 
     def get(self):
-        return self.val
+        return self._val
