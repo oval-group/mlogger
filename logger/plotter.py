@@ -33,7 +33,7 @@ class Cache(object):
 
 class Plotter(object):
 
-    def __init__(self, xp, visdom_opts):
+    def __init__(self, xp, visdom_opts, xlabel):
         super(Plotter, self).__init__()
 
         if visdom_opts is None:
@@ -46,6 +46,7 @@ class Plotter(object):
             visdom_opts['env'] = xp.name
 
         self.viz = visdom.Visdom(**visdom_opts)
+        self.xlabel = xlabel if xlabel is not None else str(xlabel)
         self.windows = {}
         self.append = {}
         self.cache = defaultdict(Cache)
@@ -55,8 +56,11 @@ class Plotter(object):
         Creates a window if it does not exist yet.
         Returns True if data has been sent successfully, False otherwise.
         """
-        xlabel = 'Time (s)' if time_idx else 'Index'
         if name not in list(self.windows.keys()):
+            if self.xlabel is None:
+                xlabel = 'Time (s)' if time_idx else 'Index'
+            else:
+                xlabel = self.xlabel
             opts = {'legend': [tag], 'title': name, 'xlabel': xlabel}
             self.windows[name] = self.viz.line(Y=y, X=x, opts=opts)
             return True

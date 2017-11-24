@@ -21,7 +21,7 @@ class Experiment(object):
 
     def __init__(self, name, log_git_hash=True,
                  use_visdom=False, visdom_opts=None,
-                 time_indexing=True):
+                 time_indexing=True, xlabel=None):
         """ Create an experiment with the following parameters:
         - log_git_hash (bool): retrieve current commit hash to log code status
         - use_visdom (bool): monitor metrics logged on visdom
@@ -44,7 +44,7 @@ class Experiment(object):
         self.time_indexing = time_indexing
 
         if self.use_visdom:
-            self.plotter = Plotter(self, visdom_opts)
+            self.plotter = Plotter(self, visdom_opts, xlabel)
 
         if log_git_hash:
             self.log_git_hash()
@@ -212,8 +212,8 @@ class Experiment(object):
             my_dict = _dict_process(my_dict)
         self.__dict__.update(my_dict)
 
-    def to_visdom(self, visdom_opts=None):
-        self.plotter = Plotter(self, visdom_opts)
+    def to_visdom(self, visdom_opts=None, xlabel=None):
+        self.plotter = Plotter(self, visdom_opts, xlabel)
         self.plotter.plot_xp(self)
 
 

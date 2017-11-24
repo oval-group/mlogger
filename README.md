@@ -31,7 +31,7 @@ n_epochs = 10
 # create Experiment
 xp = logger.Experiment("xp_name", use_visdom=True,
                        visdom_opts={'server': 'http://localhost', 'port': 8097},
-                       time_indexing=False)
+                       time_indexing=False, xlabel='Epoch')
 # log the hyperparameters of the experiment
 xp.log_config({'lr': lr, 'n_epochs': n_epochs})
 # create parent metric for training metrics (easier interface)
