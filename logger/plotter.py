@@ -46,7 +46,7 @@ class Plotter(object):
             visdom_opts['env'] = xp.name
 
         self.viz = visdom.Visdom(**visdom_opts)
-        self.xlabel = xlabel if xlabel is not None else str(xlabel)
+        self.xlabel = None if xlabel is None else str(xlabel)
         self.windows = {}
         self.append = {}
         self.cache = defaultdict(Cache)
