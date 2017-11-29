@@ -3,6 +3,7 @@ import git
 import os
 import json
 import sys
+import numpy as np
 
 from logger.xp import Experiment
 
@@ -42,8 +43,11 @@ class TestExperiment(unittest.TestCase):
                                    children=(xp.AvgMetric(name='child1'),
                                              xp.SumMetric(name='child2')))
         timer = xp.TimeMetric(tag='my_tag', name='timer')
+        other_metric = xp.BestMetric(tag='other_tag', name='simple')
+
         metrics.update(child1=0.1, child2=0.5)
         timer.update(1.)
+        other_metric.update(42)
 
         xp.log_with_tag('my_tag')
 
@@ -51,6 +55,23 @@ class TestExperiment(unittest.TestCase):
         assert list(xp.logged['child2_my_tag'].values()) == [0.5]
         assert list(xp.logged['timer_my_tag'].values()) == \
             [1. - timer._timer.start]
+        assert list(xp.logged['simple_other_tag'].values()) == []
+
+        assert xp.get_metric('child1', 'my_tag').count == 1
+        assert xp.get_metric('child2', 'my_tag').count == 1
+        assert timer._timer.start != timer._timer.current
+
+        xp.log_with_tag('*', reset=True)
+
+        assert list(xp.logged['child1_my_tag'].values()) == [0.1, 0.1]
+        assert list(xp.logged['child2_my_tag'].values()) == [0.5, 0.5]
+        assert len(xp.logged['timer_my_tag'].values()) == 2
+        assert list(xp.logged['simple_other_tag'].values()) == [42]
+
+        assert xp.get_metric('child1', 'my_tag').count == 0
+        assert xp.get_metric('child2', 'my_tag').count == 0
+        assert timer._timer.start == timer._timer.current
+        assert other_metric._val == -1 * np.inf
 
     def test_log_metric(self):
 
