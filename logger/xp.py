@@ -145,27 +145,22 @@ class Experiment(object):
         if to_visdom and self.use_visdom:
             self.plotter.plot_config(config_dict)
 
-    def log_with_tag(self, pattern, idx=None, reset=False):
+    def log_with_tag(self, tag, idx=None, reset=False):
         """ Log metrics from each tag matching the given pattern.
-        Pattern parameter must be in Unix shell-style wildcards format.
+        tag parameter must be in Unix shell-style wildcards format.
         """
-        # log metrics of all tags matching the given pattern
-        for tag in fnmatch.filter(self.metrics, pattern):
-            self._log_with_tag(tag, idx, reset)
+        matched_tags = fnmatch.filter(self.metrics, tag)
+        assert matched_tags, "Could not find any tag matching with {}".format(tag)
 
-    def _log_with_tag(self, tag, idx=None, reset=False):
+        for match in matched_tags:
+            # log all metrics with given tag except Parents
+            # (to avoid logging twice the information)
+            for metric in self.metrics[match].values():
+                if isinstance(metric, ParentWrapper_):
+                    continue
+                self.log_metric(metric, idx, reset)
 
-        # log all metrics with given tag except Parents
-        # (to avoid logging twice the information)
-        for metric in self.metrics[tag].values():
-            if isinstance(metric, ParentWrapper_):
-                continue
-            if reset:
-                self.log_and_reset_metric(metric, idx)
-            else:
-                self.log_metric(metric, idx)
-
-    def log_metric(self, metric, idx=None):
+    def log_metric(self, metric, idx=None, reset=False):
 
         # log only child metrics
         if isinstance(metric, ParentWrapper_):
@@ -180,6 +175,9 @@ class Experiment(object):
 
         if self.use_visdom and metric.to_plot:
             self.plotter.plot_metric(metric)
+
+        if reset:
+            metric.reset()
 
     def log_and_reset_metric(self, metric, idx=None):
         self.log_metric(metric, idx)
