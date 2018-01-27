@@ -226,8 +226,10 @@ class Experiment(object):
 
     def to_visdom(self, visdom_opts=None, xlabel=None):
         self.plotter = Plotter(self, visdom_opts, xlabel)
-        for (name, opts) in self.visdom_win_opts.items():
-            self.plotter.set_win_opts(name, opts)
+        # restore visdom options that have been saved (if experiment loaded from file)
+        if hasattr(self, 'visdom_win_opts'):
+            for (name, opts) in self.visdom_win_opts.items():
+                self.plotter.set_win_opts(name, opts)
         self.plotter.plot_xp(self)
 
 
