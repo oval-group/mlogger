@@ -69,6 +69,10 @@ bestk = xp.BestMetric(tag="val-best", name="acck")
 xp.AvgMetric(tag="test", name="acc1")
 xp.AvgMetric(tag="test", name="acck")
 
+xp.plotter.set_win_opts(name="acc1", opts={'title': 'Accuracy@1'})
+xp.plotter.set_win_opts(name="acck", opts={'title': 'Accuracy@k'})
+xp.plotter.set_win_opts(name="loss", opts={'title': 'Loss'})
+
 #----------------------------------------------------------
 # Training
 #----------------------------------------------------------

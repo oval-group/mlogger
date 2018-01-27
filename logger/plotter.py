@@ -48,8 +48,12 @@ class Plotter(object):
         self.viz = visdom.Visdom(**visdom_opts)
         self.xlabel = None if xlabel is None else str(xlabel)
         self.windows = {}
+        self.windows_opts = defaultdict(dict)
         self.append = {}
         self.cache = defaultdict(Cache)
+
+    def set_win_opts(self, name, opts):
+        self.windows_opts[name] = opts
 
     def _plot_xy(self, name, tag, x, y, time_idx=True):
         """
@@ -57,11 +61,18 @@ class Plotter(object):
         Returns True if data has been sent successfully, False otherwise.
         """
         if name not in list(self.windows.keys()):
-            if self.xlabel is None:
-                xlabel = 'Time (s)' if time_idx else 'Index'
+            opts = self.windows_opts[name]
+            if 'xlabel' in opts:
+                pass
+            elif self.xlabel is not None:
+                opts['xlabel'] = self.xlabel
             else:
-                xlabel = self.xlabel
-            opts = {'legend': [tag], 'title': name, 'xlabel': xlabel}
+                opts['xlabel'] = 'Time (s)' if time_idx else 'Index'
+
+            if 'legend' not in opts and tag != 'default':
+                opts['legend'] = [tag]
+            if 'title' not in opts:
+                opts['title'] = name
             self.windows[name] = self.viz.line(Y=y, X=x, opts=opts)
             return True
         else:
@@ -91,8 +102,7 @@ class Plotter(object):
         name, tag = metric.name, metric.tag
         cache = self.cache[metric.name_id()]
         cache.update(metric)
-        sent = self._plot_xy(name, tag, cache.x, cache.y,
-                             metric.time_idx)
+        sent = self._plot_xy(name, tag, cache.x, cache.y, metric.time_idx)
         # clear cache if data has been sent successfully
         if sent:
             cache.clear()

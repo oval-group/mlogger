@@ -198,6 +198,8 @@ class Experiment(object):
         var_dict['name'] = self.name
         var_dict['name_and_dir'] = self.name_and_dir
         var_dict['date_and_time'] = self.date_and_time
+        if self.use_visdom:
+            var_dict['visdom_win_opts'] = self.plotter.windows_opts
         return var_dict
 
     def to_pickle(self, filename):
@@ -224,6 +226,8 @@ class Experiment(object):
 
     def to_visdom(self, visdom_opts=None, xlabel=None):
         self.plotter = Plotter(self, visdom_opts, xlabel)
+        for (name, opts) in self.visdom_win_opts.items():
+            self.plotter.set_win_opts(name, opts)
         self.plotter.plot_xp(self)
 
 
