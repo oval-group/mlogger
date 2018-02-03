@@ -60,6 +60,8 @@ class Plotter(object):
         Creates a window if it does not exist yet.
         Returns True if data has been sent successfully, False otherwise.
         """
+        tag = None if tag == 'default' else tag
+
         if name not in list(self.windows.keys()):
             opts = self.windows_opts[name]
             if 'xlabel' in opts:
@@ -69,7 +71,7 @@ class Plotter(object):
             else:
                 opts['xlabel'] = 'Time (s)' if time_idx else 'Index'
 
-            if 'legend' not in opts and tag != 'default':
+            if 'legend' not in opts and tag:
                 opts['legend'] = [tag]
             if 'title' not in opts:
                 opts['title'] = name
