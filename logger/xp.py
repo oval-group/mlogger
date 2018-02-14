@@ -236,7 +236,7 @@ class Experiment(object):
 
 def _dict_process(my_dict):
     logged = defaultdict(OrderedDict)
-    for key in my_dict['logged'].keys():
+    for key in list(my_dict['logged'].keys()):
         splitted = key.split('_')
         if not len(splitted):
             splitted.append("default")
