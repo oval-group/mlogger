@@ -25,6 +25,9 @@ def to_float(val):
     if torch is not None:
         if isinstance(val, torch_autograd.Variable):
             val = val.data
+            # pytorch>=0.4
+            if isinstance(val, torch_autograd.Variable):
+                val = val.item()
         if torch.is_tensor(val):
             assert torch.numel(val) == 1, \
                 "val should have one element (got {})".format(torch.numel(val))
