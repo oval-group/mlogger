@@ -17,19 +17,14 @@ def to_float(val):
     And convert val to float
     """
 
+    n_elements = 1
     if isinstance(val, np.ndarray):
-        assert val.size == 1, \
-            "val should have one element (got {})".format(val.size)
-        return float(val.squeeze()[0])
+        n_elements = val.size
+    elif torch is not None and (isinstance(val, torch_autograd.Variable) or torch.is_tensor(val)):
+        n_elements = torch.numel(val)
 
-    if torch is not None:
-        if isinstance(val, torch_autograd.Variable):
-            val = val.data
-        if torch.is_tensor(val):
-            assert torch.numel(val) == 1, \
-                "val should have one element (got {})".format(torch.numel(val))
-            return float(val.squeeze()[0])
-
+    assert n_elements == 1, \
+        "val should have one element (got {})".format(n_elements)
     try:
         return float(val)
     except:
