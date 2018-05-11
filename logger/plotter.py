@@ -95,8 +95,8 @@ class Plotter(object):
 
     def plot_logged(self, logged, tag, name):
         xy = logged[tag][name]
-        x = np.array(list(xy.keys())).astype(np.float)
-        y = np.array(list(xy.values()))
+        x = np.array(xy.keys()).astype(np.float)
+        y = np.array(xy.values())
         time_idx = not np.isclose(x, x.astype(np.int)).all()
         self._plot_xy(name, tag, x, y, time_idx)
 
@@ -110,13 +110,7 @@ class Plotter(object):
             cache.clear()
 
     def plot_config(self, config):
-        config = dict((str(k), v) for (k, v) in config.items())
-        # format dictionary with pretty print
-        pp = pprint.PrettyPrinter(indent=4, width=1)
-        msg = pp.pformat(config)
-        # format with html
-        msg = msg.replace('{', '')
-        msg = msg.replace('}', '')
-        msg = msg.replace('\n', '<br />')
+        msg = "<br />".join(["{}: {}".format(str(k), v)
+                             for (k, v) in sorted(config.items(), key=lambda x: x[0])])
         # display dict on visdom
         self.viz.text(msg)
