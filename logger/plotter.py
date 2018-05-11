@@ -95,8 +95,8 @@ class Plotter(object):
 
     def plot_logged(self, logged, tag, name):
         xy = logged[tag][name]
-        x = np.array(xy.keys()).astype(np.float)
-        y = np.array(xy.values())
+        x = np.array(list(xy.keys())).astype(np.float)
+        y = np.array(list(xy.values()))
         time_idx = not np.isclose(x, x.astype(np.int)).all()
         self._plot_xy(name, tag, x, y, time_idx)
 
