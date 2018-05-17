@@ -78,9 +78,10 @@ class Plotter(object):
             self.windows[name] = self.viz.line(Y=y, X=x, opts=opts)
             return True
         else:
-            return bool(self.viz.updateTrace(Y=y, X=x, name=tag,
-                                             win=self.windows[name],
-                                             append=True))
+            return bool(self.viz.line(Y=y, X=x, name=tag,
+                                      win=self.windows[name],
+                                      update='append'))
+
 
     def plot_xp(self, xp):
 
