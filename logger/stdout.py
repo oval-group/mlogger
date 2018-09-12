@@ -2,9 +2,10 @@ import sys
 
 
 class WriteOut_(object):
-    def __init__(self, filename):
+    def __init__(self, filename, enabled=True):
         self.terminal = sys.stdout
         self.log = open(filename, 'a')
+        self.enabled = enabled
 
     def __enter__(self):
         self.start()
@@ -13,11 +14,13 @@ class WriteOut_(object):
         self.stop()
 
     def start(self):
-        sys.stdout = self
+        if self.enabled:
+            sys.stdout = self
 
     def stop(self):
-        self.log.close()
         sys.stdout = self.terminal
+        if self.enabled:
+            self.log.close()
 
     def write(self, message):
         self.terminal.write(message)
@@ -30,5 +33,5 @@ class WriteOut_(object):
         pass
 
 
-def stdout_to(filename):
-    return WriteOut_(filename)
+def stdout_to(filename, enabled=True):
+    return WriteOut_(filename, enabled)
