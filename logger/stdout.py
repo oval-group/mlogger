@@ -4,8 +4,9 @@ import sys
 class WriteOut_(object):
     def __init__(self, filename, enabled=True):
         self.terminal = sys.stdout
-        self.log = open(filename, 'a')
         self.enabled = enabled
+        if self.enabled:
+            self.log = open(filename, 'a')
 
     def __enter__(self):
         self.start()
@@ -24,7 +25,8 @@ class WriteOut_(object):
 
     def write(self, message):
         self.terminal.write(message)
-        self.log.write(message)
+        if self.enabled:
+            self.log.write(message)
 
     def flush(self):
         #this flush method is needed for python 3 compatibility.
