@@ -111,13 +111,7 @@ class Plotter(object):
             cache.clear()
 
     def plot_config(self, config):
-        config = dict((str(k), v) for (k, v) in config.items())
-        # format dictionary with pretty print
-        pp = pprint.PrettyPrinter(indent=4, width=1)
-        msg = pp.pformat(config)
-        # format with html
-        msg = msg.replace('{', '')
-        msg = msg.replace('}', '')
-        msg = msg.replace('\n', '<br />')
+        msg = "<br />".join(["{}: {}".format(str(k), v)
+                             for (k, v) in sorted(config.items(), key=lambda x: x[0])])
         # display dict on visdom
         self.viz.text(msg)
