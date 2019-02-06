@@ -1,13 +1,13 @@
 from setuptools import setup
 
-__version__ = 0.3
+__version__ = "1.0a"
 
-setup(name='logger',
-      description='A simple logger for experiments',
+setup(name='mlogger',
+      description='A Machine Learning logger',
       author='Leonard Berrada',
-      packages=['logger'],
+      packages=['mlogger'],
       license="MIT License",
-      url='https://github.com/oval-group/logger',
+      url='https://github.com/oval-group/mlogger',
       version=str(__version__),
       install_requires=["GitPython",
                         "numpy",

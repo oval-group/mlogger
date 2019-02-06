@@ -1,5 +1,6 @@
 import os
-import logger
+import torch
+import mlogger
 import numpy as np
 
 from builtins import range
@@ -41,6 +42,7 @@ def oracle(data, target):
 
 
 # some hyper-parameters of the experiment
+use_visdom = True
 lr = 0.01
 n_epochs = 10
 
@@ -48,81 +50,107 @@ n_epochs = 10
 # Prepare logging
 #----------------------------------------------------------
 
-# create Experiment
-xp = logger.Experiment("xp_name", use_visdom=True,
-                       visdom_opts={'server': 'http://localhost', 'port': 8097},
-                       time_indexing=False, xlabel='Epoch')
 # log the hyperparameters of the experiment
-xp.log_config({'lr': lr, 'n_epochs': n_epochs})
-# create parent metric for training metrics (easier interface)
-xp.ParentWrapper(tag='train', name='parent',
-                 children=(xp.AvgMetric(name='loss'),
-                           xp.AvgMetric(name='acc1'),
-                           xp.AvgMetric(name='acck')))
-# same for validation metrics (note all children inherit tag from parent)
-xp.ParentWrapper(tag='val', name='parent',
-                 children=(xp.AvgMetric(name='loss'),
-                           xp.AvgMetric(name='acc1'),
-                           xp.AvgMetric(name='acck')))
-best1 = xp.BestMetric(tag="val-best", name="acc1")
-bestk = xp.BestMetric(tag="val-best", name="acck")
-xp.AvgMetric(tag="test", name="acc1")
-xp.AvgMetric(tag="test", name="acck")
+if use_visdom:
+    plotter = mlogger.VisdomPlotter({'env': 'my_experiment', 'server': 'http://localhost', 'port': 8097},
+                                   manual_update=True)
+else:
+    plotter = None
 
-xp.plotter.set_win_opts(name="acc1", opts={'title': 'Accuracy@1'})
-xp.plotter.set_win_opts(name="acck", opts={'title': 'Accuracy@k'})
-xp.plotter.set_win_opts(name="loss", opts={'title': 'Loss'})
+xp = mlogger.Container()
+
+xp.config = mlogger.Config(plotter=plotter)
+xp.config.update(lr=lr, n_epochs=n_epochs)
+
+xp.epoch = mlogger.metric.Simple()
+
+xp.train = mlogger.Container()
+xp.train.acc1 = mlogger.metric.Average(plotter=plotter, plot_title="Accuracy@1", plot_legend="training")
+xp.train.acck = mlogger.metric.Average(plotter=plotter, plot_title="Accuracy@k", plot_legend="training")
+xp.train.loss = mlogger.metric.Average(plotter=plotter, plot_title="Objective")
+xp.train.timer = mlogger.metric.Timer(plotter=plotter, plot_title="Time", plot_legend="training")
+
+xp.val = mlogger.Container()
+xp.val.acc1 = mlogger.metric.Average(plotter=plotter, plot_title="Accuracy@1", plot_legend="validation")
+xp.val.acck = mlogger.metric.Average(plotter=plotter, plot_title="Accuracy@k", plot_legend="validation")
+xp.val.timer = mlogger.metric.Timer(plotter=plotter, plot_title="Time", plot_legend="validation")
+
+xp.val_best = mlogger.Container()
+xp.val_best.acc1 = mlogger.metric.Maximum(plotter=plotter, plot_title="Accuracy@1", plot_legend="validation-best")
+xp.val_best.acck = mlogger.metric.Maximum(plotter=plotter, plot_title="Accuracy@k", plot_legend="validation-best")
+
 
 #----------------------------------------------------------
 # Training
 #----------------------------------------------------------
 
+
 for epoch in range(n_epochs):
     # train model
+    for metric in xp.train.metrics():
+        metric.reset()
     for (x, y) in training_data():
         loss, acc1, acck = oracle(x, y)
         # accumulate metrics (average over mini-batches)
-        xp.Parent_Train.update(loss=loss, acc1=acc1,
-                               acck=acck, n=len(x))
-    # log metrics (i.e. store in xp and send to visdom) and reset
-    xp.Parent_Train.log_and_reset()
+        batch_size = len(x)
+        xp.train.loss.update(loss, weighting=batch_size)
+        xp.train.acc1.update(acc1, weighting=batch_size)
+        xp.train.acck.update(acck, weighting=batch_size)
+    xp.train.timer.update()
+    for metric in xp.train.metrics():
+        metric.log()
 
+    # reset metrics in container xp.val
+    # (does not include xp.val_best.acc1 and xp.val_best.acck, which we do not want to reset)
+    for metric in xp.val.metrics():
+        metric.reset()
+
+    # update values on validation set
     for (x, y) in validation_data():
-        loss, acc1, acck = oracle(x, y)
-        xp.Parent_Val.update(loss=loss, acc1=acc1,
-                             acck=acck, n=len(x))
-    xp.Parent_Val.log_and_reset()
-    best1.update(xp.acc1_val).log()  # will update only if better than previous values
-    bestk.update(xp.acck_val).log()  # will update only if better than previous values
+        _, acc1, acck = oracle(x, y)
+        batch_size = len(x)
+        xp.val.acc1.update(acc1, weighting=batch_size)
+        xp.val.acck.update(acck, weighting=batch_size)
+    xp.val.timer.update()
+    # log values on validation set
+    for metric in xp.val.metrics():
+        metric.log()
 
-for (x, y) in test_data():
-    _, acc1, acck = oracle(x, y)
-    # update metrics individually
-    xp.Acc1_Test.update(acc1, n=len(x))
-    xp.Acck_Test.update(acck, n=len(x))
-xp.log_with_tag('test')
+    # update best values on validation set
+    xp.val_best.acc1.update(xp.val.acc1.value)
+    xp.val_best.acck.update(xp.val.acck.value)
+    # log best values on validation set
+    for metric in xp.val_best.metrics():
+        metric.log()
 
 print("=" * 50)
 print("Best Performance On Validation Data:")
 print("-" * 50)
-print("Prec@1: \t {0:.2f}%".format(best1.value))
-print("Prec@k: \t {0:.2f}%".format(bestk.value))
-print("=" * 50)
-print("Performance On Test Data:")
-print("-" * 50)
-print("Prec@1: \t {0:.2f}%".format(xp.acc1_test))
-print("Prec@k: \t {0:.2f}%".format(xp.acck_test))
+print("Prec@1: \t {0:.2f}%".format(xp.val_best.acc1.value))
+print("Prec@k: \t {0:.2f}%".format(xp.val_best.acck.value))
+
+plotter.update_plots()
 
 #----------------------------------------------------------
 # Save & load experiment
 #----------------------------------------------------------
 
-# save file
-xp.to_json("my_json_log.json")  # or xp.to_pickle("my_pickle_log.pkl")
+xp.train.loss.reset()
+xp.train.loss.update(1)
+print('Train loss value before saving state: {}'.format(xp.train.loss.value))
 
-xp2 = logger.Experiment("")  # new Experiment instance
-xp2.from_json("my_json_log.json")  # or xp.from_pickle("my_pickle_log.pkl")
-xp2.to_visdom(visdom_opts={'server': 'http://localhost', 'port': 8097})  # plot again data on visdom
+xp.save_to('state.json')
 
-# remove the file
-os.remove("my_json_log.json")
+new_plotter = mlogger.VisdomPlotter(visdom_opts={'env': 'my_experiment', 'server': 'http://localhost', 'port': 8097},
+                                    manual_update=True)
+
+new_xp = mlogger.load_container('state.json')
+new_xp.plot_on(new_plotter)
+new_plotter.update_plots()
+
+print('Current train loss value: {}'.format(new_xp.train.loss.value))
+new_xp.train.loss.update(2)
+print('Updated train loss value: {}'.format(new_xp.train.loss.value))
+
+# # remove the file
+os.remove('state.json')
