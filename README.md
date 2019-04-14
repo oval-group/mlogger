@@ -5,7 +5,7 @@ Currently in version alpha, the API might undergo some minor changes.
 ## Installation
 
 To install the package, run:
-* `pip install mlogger` (TODO: register on pypi, soon)
+* `pip install mlogger`
 
 ## Why Use MLogger?
 These are the strengths of `mlogger` that make it a useful tool for logging machine learning experiments.
