@@ -80,5 +80,6 @@ class VisdomPlotter(object):
             self.text_wins[title].load_state_dict(text_win_state)
 
     def __repr__(self):
-        repr_ = "VisdomPlotter({visdom_opts}, {manual_update})".format(visdom_opts=self.visdom_opts, manual_update=self.manual_update)
+        repr_ = "VisdomPlotter({visdom_opts}, {manual_update})".format(visdom_opts=self.visdom_opts,
+                                                                       manual_update=self.manual_update)
         return repr_
