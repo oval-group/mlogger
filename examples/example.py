@@ -66,7 +66,7 @@ else:
 
 xp = mlogger.Container()
 
-xp.config = mlogger.Config(plotter=visdom_plotter, summary_writer=summary_writer)
+xp.config = mlogger.Config(visdom_plotter=visdom_plotter, summary_writer=summary_writer)
 xp.config.update(lr=lr, n_epochs=n_epochs)
 
 xp.epoch = mlogger.metric.Simple()
