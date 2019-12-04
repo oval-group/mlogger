@@ -60,7 +60,7 @@ print(new_xp.total_timer.value)  # 0.0001
     acc.log()  # automatically sends 96.0 to visdom server on window with title 'Accuracy'
     ```
     * TODO
-    * Performance: you can manually choose when to update the `visdom` plots. This permits to batch the data being sent and yields considerable speedups when logging thousands or more points per second.
+    * Performance: you can manually choose when to update the `tensorboard` plots. This permits to batch the data being sent and yields considerable speedups when logging thousands or more points per second.
 
 
 * Save all output printed in the console to a text file
