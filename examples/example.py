@@ -66,7 +66,7 @@ else:
 
 xp = mlogger.Container()
 
-xp.config = mlogger.Config(visdom_plotter=visdom_plotter, summary_writer=summary_writer)
+xp.config = mlogger.Config(plotter=visdom_plotter, summary_writer=summary_writer)
 xp.config.update(lr=lr, n_epochs=n_epochs)
 
 xp.epoch = mlogger.metric.Simple()
@@ -136,7 +136,8 @@ print("-" * 50)
 print("Prec@1: \t {0:.2f}%".format(xp.val_best.acc1.value))
 print("Prec@k: \t {0:.2f}%".format(xp.val_best.acck.value))
 
-visdom_plotter.update_plots()
+if use_visdom:
+    visdom_plotter.update_plots()
 
 #----------------------------------------------------------
 # Save & load experiment
@@ -148,15 +149,18 @@ print('Train loss value before saving state: {}'.format(xp.train.loss.value))
 
 xp.save_to('state.json')
 
-new_visdom_plotter = mlogger.VisdomPlotter(visdom_opts={'env': 'my_experiment', 'server': 'http://localhost', 'port': 8097},
-                                    manual_update=True)
-new_summary_writer = SummaryWriter()
+
 
 new_xp = mlogger.load_container('state.json')
-new_xp.plot_on_visdom(new_visdom_plotter)
-new_visdom_plotter.update_plots()
 
-# new_xp.plot_on_tensorboard(new_summary_writer)
+if use_visdom:
+    new_visdom_plotter = mlogger.VisdomPlotter(visdom_opts={'env': 'my_experiment', 'server': 'http://localhost', 'port': 8097},
+                                    manual_update=True)
+    new_xp.plot_on_visdom(new_visdom_plotter)
+    new_visdom_plotter.update_plots()
+if use_tensorboard:
+    new_summary_writer = SummaryWriter()
+    new_xp.plot_on_tensorboard(new_summary_writer)
 
 print('Current train loss value: {}'.format(new_xp.train.loss.value))
 new_xp.train.loss.update(2)
