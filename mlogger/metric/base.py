@@ -9,8 +9,6 @@ from .history import History
 from .to_float import to_float
 
 
-
-
 class Base(object):
     def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None,
                  visdom_plotter=None, summary_writer=None):
@@ -28,7 +26,7 @@ class Base(object):
             assert visdom_plotter is None
             visdom_plotter = plotter
             del plotter
-            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+            warnings.warn("Argument `plotter` is deprecated. Please use `visdom_plotter` instead.", FutureWarning)
 
         self._summary_writer = summary_writer
         self._visdom_plotter = visdom_plotter
@@ -41,7 +39,7 @@ class Base(object):
 
         if visdom_plotter is not None:
             assert plot_title is not None, "a plot title is required"
-            self.plot_on_visdom(visdom_plotter, plot_title, plot_legend)            
+            self.plot_on_visdom(visdom_plotter, plot_title, plot_legend)
 
     def init_history(self, time_indexing):
         self._history = History(time_indexing)
@@ -133,7 +131,7 @@ class Base(object):
         return self._history._last_value
 
     def plot_on(self, plotter, plot_title, plot_legend=None):
-        warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        warnings.warn("Argument `plotter` is deprecated. Please use `visdom_plotter` instead.", FutureWarning)
         self.plot_on_visdom(plotter, plot_title, plot_legend)
 
     def plot_on_visdom(self, visdom_plotter, plot_title, plot_legend=None):

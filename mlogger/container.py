@@ -74,7 +74,7 @@ class Container(object):
         return named_metrics_list
 
     def plot_on(self, plotter):
-        warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        warnings.warn("Argument `plotter` is deprecated. Please use `visdom_plotter` instead.", FutureWarning)
         self.plot_on_visdom(plotter)
 
     def plot_on_visdom(self, visdom_plotter):
@@ -89,7 +89,6 @@ class Container(object):
                 plot_legend = child._plot_legend
                 if plot_title is not None:
                     child.plot_on_visdom(visdom_plotter, plot_title, plot_legend)
-
 
     def plot_on_tensorboard(self, summary_writer):
         for child in self.children():

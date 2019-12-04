@@ -9,13 +9,13 @@ import warnings
 
 
 class Config(object):
-    def __init__(self, plotter=None, plot_title=None, get_general_info=True, 
+    def __init__(self, plotter=None, plot_title=None, get_general_info=True,
                  get_git_info=False, visdom_plotter=None, summary_writer=None, **kwargs):
 
         object.__setattr__(self, '_state', {})
 
         if plotter is not None:
-            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+            warnings.warn("Argument `plotter` is deprecated. Please use `visdom_plotter` instead.", FutureWarning)
             visdom_plotter = plotter
             del plotter
 
@@ -81,7 +81,7 @@ class Config(object):
         return repr_
 
     def plot_on(self, plotter, plot_title):
-        warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        warnings.warn("Argument `plotter` is deprecated. Please use `visdom_plotter` instead.", FutureWarning)
         return self.plot_on_visdom(plotter, plot_title)
 
     def plot_on_visdom(self, visdom_plotter, plot_title):
