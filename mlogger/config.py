@@ -5,19 +5,29 @@ import git
 import time
 import sys
 import mlogger
+import warnings
 
 
 class Config(object):
-    def __init__(self, plotter=None, plot_title=None,
-                 get_general_info=True, get_git_info=False, **kwargs):
+    def __init__(self, plotter=None, plot_title=None, get_general_info=True, 
+                 get_git_info=False, visdom_plotter=None, summary_writer=None, **kwargs):
 
         object.__setattr__(self, '_state', {})
 
         if plotter is not None:
-            self.plot_on(plotter, plot_title)
-        else:
-            object.__setattr__(self, '_plotter', plotter)
-            object.__setattr__(self, '_plot_title', plot_title)
+            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+            visdom_plotter = plotter
+            del plotter
+
+        object.__setattr__(self, '_visdom_plotter', visdom_plotter)
+        object.__setattr__(self, '_summary_writer', summary_writer)
+        object.__setattr__(self, '_plot_title', plot_title)
+
+        if visdom_plotter is not None:
+            self.plot_on_visdom(visdom_plotter, plot_title)
+
+        if summary_writer is not None:
+            self.plot_on_tensorboard(summary_writer)
 
         if get_general_info:
             self.update_general_info()
@@ -55,8 +65,10 @@ class Config(object):
 
     def update(self, **kwargs):
         self._state.update(kwargs)
-        if self._plotter is not None:
-            self._plotter._update_text(self._plot_title, kwargs)
+        if self._visdom_plotter is not None:
+            self._visdom_plotter._update_text(self._plot_title, kwargs)
+        if self._summary_writer is not None:
+            self._summary_writer.add_hparams(kwargs, {})
         return self
 
     def load_state_dict(self, state):
@@ -69,13 +81,30 @@ class Config(object):
         return repr_
 
     def plot_on(self, plotter, plot_title):
+        warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        return self.plot_on_visdom(plotter, plot_title)
+
+    def plot_on_visdom(self, visdom_plotter, plot_title):
         # plot current state
         if len(self._state):
-            plotter._update_text(plot_title, self._state)
+            visdom_plotter._update_text(plot_title, self._state)
 
         # store for future logs
-        object.__setattr__(self, '_plotter', plotter)
+        object.__setattr__(self, '_visdom_plotter', visdom_plotter)
         object.__setattr__(self, '_plot_title', plot_title)
+
+        return self
+
+    def plot_on_tensorboard(self, summary_writer, plot_title=None):
+        if plot_title:
+            warnings.warn("warning argument ignored", RuntimeWarning)
+
+        # plot current state
+        if len(self._state):
+            summary_writer.add_hparams(self._state, {})
+
+        # store for future logs
+        object.__setattr__(self, '_summary_writer', summary_writer)
 
         return self
 

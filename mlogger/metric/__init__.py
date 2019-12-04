@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import warnings
 
 from collections import defaultdict, OrderedDict
 from future.utils import viewitems
@@ -14,8 +15,13 @@ __all__ = [
 
 
 class Simple(Base):
-    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None):
-        super(Simple, self).__init__(time_indexing, plotter, plot_title, plot_legend)
+    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None, visdom_plotter=None, summary_writer=None):
+        if plotter is not None:
+            assert visdom_plotter is None
+            visdom_plotter = plotter
+            del plotter
+            import warnings
+        super(Simple, self).__init__(time_indexing=time_indexing, plot_title=plot_title, plot_legend=plot_legend, visdom_plotter=visdom_plotter, summary_writer=summary_writer)
 
     def reset(self):
         self._val = 0.
@@ -44,8 +50,13 @@ class Simple(Base):
 
 
 class TNT(Base):
-    def __init__(self, tnt_meter, time_indexing=None, plotter=None, plot_title=None, plot_legend=None):
-        super(TNT, self).__init__(time_indexing, plotter, plot_title, plot_legend)
+    def __init__(self, tnt_meter, time_indexing=None, plotter=None, plot_title=None, plot_legend=None, visdom_plotter=None, summary_writer=None):
+        if plotter is not None:
+            assert visdom_plotter is None
+            visdom_plotter = plotter
+            del plotter
+            import warnings
+        super(TNT, self).__init__(time_indexing=time_indexing, plot_title=plot_title, plot_legend=plot_legend, visdom_plotter=visdom_plotter, summary_writer=summary_writer)
         self._tnt_meter = tnt_meter
 
     def reset(self):
@@ -70,8 +81,13 @@ class TNT(Base):
 
 
 class Timer(Base):
-    def __init__(self, plotter=None, plot_title=None, plot_legend=None):
-        super(Timer, self).__init__(False, plotter, plot_title, plot_legend)
+    def __init__(self, plotter=None, plot_title=None, plot_legend=None, visdom_plotter=None, summary_writer=None):
+        if plotter is not None:
+            assert visdom_plotter is None
+            visdom_plotter = plotter
+            del plotter
+            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        super(Timer, self).__init__(time_indexing=False, plot_title=plot_title, plot_legend=plot_legend, visdom_plotter=visdom_plotter, summary_writer=summary_writer)
 
     def reset(self):
         self.start = time.time()
@@ -105,8 +121,13 @@ class Timer(Base):
 
 
 class Maximum(Base):
-    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None):
-        super(Maximum, self).__init__(time_indexing, plotter, plot_title, plot_legend)
+    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None, visdom_plotter=None, summary_writer=None):
+        if plotter is not None:
+            assert visdom_plotter is None
+            visdom_plotter = plotter
+            del plotter
+            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        super(Maximum, self).__init__(time_indexing=time_indexing, plot_title=plot_title, plot_legend=plot_legend, visdom_plotter=visdom_plotter, summary_writer=summary_writer)
 
     def reset(self):
         self._val = -np.inf
@@ -143,8 +164,13 @@ class Maximum(Base):
 
 
 class Minimum(Base):
-    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None):
-        super(Minimum, self).__init__(time_indexing, plotter, plot_title, plot_legend)
+    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None, visdom_plotter=None, summary_writer=None):
+        if plotter is not None:
+            assert visdom_plotter is None
+            visdom_plotter = plotter
+            del plotter
+            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        super(Minimum, self).__init__(time_indexing=time_indexing, plot_title=plot_title, plot_legend=plot_legend, visdom_plotter=visdom_plotter, summary_writer=summary_writer)
 
     def reset(self):
         self._val = np.inf
@@ -184,8 +210,13 @@ class Accumulator_(Base):
     """
     Credits to the authors of pytorch/tnt for this.
     """
-    def __init__(self, time_indexing, plotter=None, plot_title=None, plot_legend=None):
-        super(Accumulator_, self).__init__(time_indexing, plotter, plot_title, plot_legend)
+    def __init__(self, time_indexing, plotter=None, plot_title=None, plot_legend=None, visdom_plotter=None, summary_writer=None):
+        if plotter is not None:
+            assert visdom_plotter is None
+            visdom_plotter = plotter
+            del plotter
+            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        super(Accumulator_, self).__init__(time_indexing=time_indexing, plot_title=plot_title, plot_legend=plot_legend, visdom_plotter=visdom_plotter, summary_writer=summary_writer)
 
     def reset(self):
         self._avg = 0
@@ -213,8 +244,13 @@ class Accumulator_(Base):
 
 
 class Average(Accumulator_):
-    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None):
-        super(Average, self).__init__(time_indexing, plotter, plot_title, plot_legend)
+    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None, visdom_plotter=None, summary_writer=None):
+        if plotter is not None:
+            assert visdom_plotter is None
+            visdom_plotter = plotter
+            del plotter
+            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        super(Average, self).__init__(time_indexing=time_indexing, plot_title=plot_title, plot_legend=plot_legend, visdom_plotter=visdom_plotter, summary_writer=summary_writer)
 
     @property
     def value(self):
@@ -230,8 +266,13 @@ class Average(Accumulator_):
 
 
 class Sum(Accumulator_):
-    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None):
-        super(Sum, self).__init__(time_indexing, plotter, plot_title, plot_legend)
+    def __init__(self, time_indexing=None, plotter=None, plot_title=None, plot_legend=None, visdom_plotter=None, summary_writer=None):
+        if plotter is not None:
+            assert visdom_plotter is None
+            visdom_plotter = plotter
+            del plotter
+            warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        super(Sum, self).__init__(time_indexing=time_indexing, plot_title=plot_title, plot_legend=plot_legend, visdom_plotter=visdom_plotter, summary_writer=summary_writer)
 
     @property
     def value(self):

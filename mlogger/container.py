@@ -4,6 +4,7 @@ import json
 import numpy as np
 from builtins import dict
 from collections import defaultdict, OrderedDict
+import warnings
 
 
 class Container(object):
@@ -73,17 +74,34 @@ class Container(object):
         return named_metrics_list
 
     def plot_on(self, plotter):
+        warnings.warn("use visdom_plotter instead of plotter", FutureWarning)
+        self.plot_on_visdom(plotter)
+
+    def plot_on_visdom(self, visdom_plotter):
         for child in self.children():
             if isinstance(child, Container):
-                child.plot_on(plotter)
+                child.plot_on_visdom(visdom_plotter)
             elif isinstance(child, mlogger.Config):
                 plot_title = child._plot_title
-                child.plot_on(plotter, plot_title)
+                child.plot_on_visdom(visdom_plotter, plot_title)
             elif isinstance(child, mlogger.metric.Base):
                 plot_title = child._plot_title
                 plot_legend = child._plot_legend
                 if plot_title is not None:
-                    child.plot_on(plotter, plot_title, plot_legend)
+                    child.plot_on_visdom(visdom_plotter, plot_title, plot_legend)
+
+
+    def plot_on_tensorboard(self, summary_writer):
+        for child in self.children():
+            if isinstance(child, Container):
+                child.plot_on_tensorboard(summary_writer)
+            elif isinstance(child, mlogger.Config):
+                child.plot_on_tensorboard(summary_writer)
+            elif isinstance(child, mlogger.metric.Base):
+                plot_title = child._plot_title
+                plot_legend = child._plot_legend
+                if plot_title is not None:
+                    child.plot_on_tensorboard(summary_writer, plot_title, plot_legend)
 
     def __repr__(self):
         _repr = "Container()"
