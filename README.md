@@ -1,6 +1,5 @@
 # MLogger: a Machine Learning logger
 
-Currently in version alpha, the API might undergo some minor changes.
 
 ## Installation
 
@@ -49,6 +48,21 @@ print(new_xp.total_timer.value)  # 0.0001
     * Robustness: if `visdom` fails to send data (due to a network instability for instance), `logger` automatically caches it and tries to send it together with the next request
     * Performance: you can manually choose when to update the `visdom` plots. This permits to batch the data being sent and yields considerable speedups when logging thousands or more points per second.
 
+
+* Improve your user experience with `tensorboard`:
+    * Ease of use:
+    ```python
+    summary_writer = SummaryWriter()
+    acc = mlogger.metric.Average(summary_writer=summary_writer, plot_title="Accuracy")
+    acc.update(100)
+    acc.update(92)
+    print(acc.value)  # 96.0
+    acc.log()  # automatically sends 96.0 to visdom server on window with title 'Accuracy'
+    ```
+    * TODO
+    * Performance: you can manually choose when to update the `visdom` plots. This permits to batch the data being sent and yields considerable speedups when logging thousands or more points per second.
+
+
 * Save all output printed in the console to a text file
 ```python
 with mlogger.stdout_to('printed_stuff.txt'):
@@ -67,9 +81,9 @@ The following example shows some functionalities of the package (full example co
 import mlogger
 import numpy as np
 
-#...
+# ...
 # code to generate fake data
-#...
+# ...
 
 
 # some hyper-parameters of the experiment
