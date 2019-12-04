@@ -48,14 +48,14 @@ use_tensorboard = True
 lr = 0.01
 n_epochs = 10
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Prepare logging
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 # log the hyperparameters of the experiment
 if use_visdom:
     visdom_plotter = mlogger.VisdomPlotter({'env': 'my_experiment', 'server': 'http://localhost', 'port': 8097},
-                                   manual_update=True)
+                                           manual_update=True)
 else:
     visdom_plotter = None
 
@@ -72,24 +72,33 @@ xp.config.update(lr=lr, n_epochs=n_epochs)
 xp.epoch = mlogger.metric.Simple()
 
 xp.train = mlogger.Container()
-xp.train.acc1 = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Accuracy@1", plot_legend="training")
-xp.train.acck = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Accuracy@k", plot_legend="training")
-xp.train.loss = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Objective")
-xp.train.timer = mlogger.metric.Timer(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Time", plot_legend="training")
+xp.train.acc1 = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                       plot_title="Accuracy@1", plot_legend="training")
+xp.train.acck = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                       plot_title="Accuracy@k", plot_legend="training")
+xp.train.loss = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                       plot_title="Objective")
+xp.train.timer = mlogger.metric.Timer(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                      plot_title="Time", plot_legend="training")
 
 xp.val = mlogger.Container()
-xp.val.acc1 = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Accuracy@1", plot_legend="validation")
-xp.val.acck = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Accuracy@k", plot_legend="validation")
-xp.val.timer = mlogger.metric.Timer(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Time", plot_legend="validation")
+xp.val.acc1 = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                     plot_title="Accuracy@1", plot_legend="validation")
+xp.val.acck = mlogger.metric.Average(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                     plot_title="Accuracy@k", plot_legend="validation")
+xp.val.timer = mlogger.metric.Timer(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                    plot_title="Time", plot_legend="validation")
 
 xp.val_best = mlogger.Container()
-xp.val_best.acc1 = mlogger.metric.Maximum(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Accuracy@1", plot_legend="validation-best")
-xp.val_best.acck = mlogger.metric.Maximum(visdom_plotter=visdom_plotter, summary_writer=summary_writer, plot_title="Accuracy@k", plot_legend="validation-best")
+xp.val_best.acc1 = mlogger.metric.Maximum(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                          plot_title="Accuracy@1", plot_legend="validation-best")
+xp.val_best.acck = mlogger.metric.Maximum(visdom_plotter=visdom_plotter, summary_writer=summary_writer,
+                                          plot_title="Accuracy@k", plot_legend="validation-best")
 
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Training
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 
 for epoch in range(n_epochs):
@@ -139,9 +148,9 @@ print("Prec@k: \t {0:.2f}%".format(xp.val_best.acck.value))
 if use_visdom:
     visdom_plotter.update_plots()
 
-#----------------------------------------------------------
+# ----------------------------------------------------------
 # Save & load experiment
-#----------------------------------------------------------
+# ----------------------------------------------------------
 
 xp.train.loss.reset()
 xp.train.loss.update(1)
@@ -150,12 +159,11 @@ print('Train loss value before saving state: {}'.format(xp.train.loss.value))
 xp.save_to('state.json')
 
 
-
 new_xp = mlogger.load_container('state.json')
 
 if use_visdom:
-    new_visdom_plotter = mlogger.VisdomPlotter(visdom_opts={'env': 'my_experiment', 'server': 'http://localhost', 'port': 8097},
-                                    manual_update=True)
+    new_visdom_plotter = mlogger.VisdomPlotter(visdom_opts={'env': 'my_experiment', 'server': 'http://localhost',
+                                               'port': 8097}, manual_update=True)
     new_xp.plot_on_visdom(new_visdom_plotter)
     new_visdom_plotter.update_plots()
 if use_tensorboard:

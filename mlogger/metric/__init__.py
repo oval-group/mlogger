@@ -16,10 +16,11 @@ __all__ = [
 
 def _deprecate_plotter_argument(plotter, visdom_plotter):
     if plotter is not None:
-        if visdom_plotter is None or visdom_plotter == plotter:
+        if (visdom_plotter is None) or (visdom_plotter is plotter):
             warnings.warn("Argument `plotter` is deprecated. Please use `visdom_plotter` instead.", FutureWarning)
         else:
             raise ValueError("Arguments 'plotter', and 'visdom_plotter', are different and both not None")
+        visdom_plotter = plotter
 
     return visdom_plotter
 
