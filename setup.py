@@ -4,7 +4,7 @@ __version__ = "1.1.0"
 
 setup(name='mlogger',
       description='A Machine Learning logger',
-      author='Leonard Berrada',
+      author='Leonard Berrada, Florian Jaeckle',
       packages=find_packages(),
       license="MIT License",
       url='https://github.com/oval-group/mlogger',

@@ -35,6 +35,18 @@ print(new_xp.train.accuracy.value)  # 97.0
 print(new_xp.total_timer.value)  # 0.0001
 ```
 
+* Easily visualize results on `tensorboard` with pytorch:
+```python
+from torch.utils.tensorboard import SummaryWriter
+
+summary_writer = SummaryWriter()
+acc = mlogger.metric.Average(summary_writer=summary_writer, plot_title="Accuracy")
+acc.update(100)
+acc.update(92)
+print(acc.value)  # 96.0
+acc.log()  # automatically logs 96.0 to tensorboard (displayed with title 'Accuracy')
+```
+
 * Improve your user experience with `visdom`:
     * Ease of use:
     ```python
@@ -47,21 +59,6 @@ print(new_xp.total_timer.value)  # 0.0001
     ```
     * Robustness: if `visdom` fails to send data (due to a network instability for instance), `logger` automatically caches it and tries to send it together with the next request
     * Performance: you can manually choose when to update the `visdom` plots. This permits to batch the data being sent and yields considerable speedups when logging thousands or more points per second.
-
-
-* Improve your user experience with `tensorboard`:
-    * Ease of use:
-    ```python
-    summary_writer = SummaryWriter()
-    acc = mlogger.metric.Average(summary_writer=summary_writer, plot_title="Accuracy")
-    acc.update(100)
-    acc.update(92)
-    print(acc.value)  # 96.0
-    acc.log()  # automatically sends 96.0 to visdom server on window with title 'Accuracy'
-    ```
-    * TODO
-    * Performance: you can manually choose when to update the `tensorboard` plots. This permits to batch the data being sent and yields considerable speedups when logging thousands or more points per second.
-
 
 * Save all output printed in the console to a text file
 ```python
