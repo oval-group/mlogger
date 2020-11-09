@@ -39,7 +39,7 @@ print(new_xp.total_timer.value)  # 0.0001
 * Improve your user experience with `visdom`:
     * Ease of use:
     ```python
-    plotter = mlogger.VisdomPlotter(({'env': 'my_experiment', 'server': 'http://localhost', 'port': 8097})
+    plotter = mlogger.VisdomPlotter(({'env': 'my_experiment', 'server': 'http://localhost', 'port': 8097}))
     acc = mlogger.metric.Average(plotter=plotter, plot_title="Accuracy")
     acc.update(100)
     acc.update(92)
